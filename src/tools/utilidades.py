@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from src.utils.validators import limpar_numeros
 from src.utils.formatters import formatar_telefone_br
 from src.utils import http_client
-from src.config import BRASIL_API_BASE, AWESOME_API_BASE
+from src.config import BRASIL_API_BASE, EXCHANGE_RATE_API_BASE
 
 
 # Mapa completo DDD → estado
@@ -55,7 +55,7 @@ def register_tools(mcp: FastMCP) -> None:
         Converte um valor entre moedas usando cotação em tempo real.
 
         Use quando precisar converter BRL para outra moeda ou entre moedas estrangeiras.
-        Consulta a AwesomeAPI em tempo real.
+        Consulta o ExchangeRate-API em tempo real.
         Exemplos: converter_moeda(100, "BRL", "USD"), converter_moeda(50, "USD", "BRL")
 
         Parâmetros:
@@ -73,7 +73,7 @@ def register_tools(mcp: FastMCP) -> None:
             return f"✅ Conversão: {de} = {para}.\nValor: {valor:.2f} (mesma moeda, sem conversão)."
 
         try:
-            url = f"{AWESOME_API_BASE}/last/{de}-{para}"
+            url = f"{EXCHANGE_RATE_API_BASE}/latest/{de}"
             response = await http_client.get(url)
             response.raise_for_status()
             data = response.json()
@@ -84,16 +84,14 @@ def register_tools(mcp: FastMCP) -> None:
                 "Dica: verifique se os códigos de moeda são válidos (ex: BRL, USD, EUR)."
             )
 
-        # A API retorna a chave como "{de}{para}"
-        chave = f"{de}{para}"
-        if chave not in data:
+        rates = data.get("rates", {})
+        if para not in rates:
             return (
-                f"❌ Par de moedas não encontrado: {de}/{para}.\n"
-                "Dica: verifique se os códigos são válidos."
+                f"❌ Moeda de destino não encontrada: {para}.\n"
+                "Dica: verifique se o código da moeda é válido (ex: BRL, USD, EUR)."
             )
 
-        cotacao_info = data[chave]
-        taxa = float(cotacao_info.get("bid", 0))
+        taxa = float(rates[para])
         if taxa <= 0:
             return f"❌ Cotação inválida para {de}/{para}."
 

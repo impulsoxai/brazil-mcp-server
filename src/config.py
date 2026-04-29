@@ -16,7 +16,7 @@ PAID_TIER_DAILY_LIMIT = int(os.getenv("PAID_TIER_DAILY_LIMIT", "10000"))
 
 # APIs externas
 BRASIL_API_BASE = os.getenv("BRASIL_API_BASE", "https://brasilapi.com.br/api")
-AWESOME_API_BASE = os.getenv("AWESOME_API_BASE", "https://economia.awesomeapi.com.br")
+EXCHANGE_RATE_API_BASE = os.getenv("EXCHANGE_RATE_API_BASE", "https://open.er-api.com/v6")
 
 # Timeout padrão para chamadas HTTP (segundos)
 HTTP_TIMEOUT = 10.0
