@@ -1,17 +1,37 @@
-"""Middleware de autenticação — validação de API key.
+"""Middleware de autenticação — validação de API key."""
 
-Sprint 3 — Será implementado:
-- Validação de API key via header Authorization
-- Distinção entre tier free (100 req/dia) e paid (10.000 req/dia)
-- Armazenamento de keys em banco de dados (SQLite ou PostgreSQL)
-- Endpoints de criação/revogação de keys
-"""
+from src.config import FREE_TIER_DAILY_LIMIT, PAID_TIER_DAILY_LIMIT
 
 
-def verificar_autenticacao(headers: dict) -> bool:
-    """Verifica se a requisição está autenticada.
+# Tipos de tier
+TIER_FREE = "free"
+TIER_PAID = "paid"
 
-    Por ora, sempre retorna True (sem autenticação real).
-    No Sprint 3, validará a API key do header Authorization.
+
+def verificar_autenticacao(headers: dict) -> dict:
     """
-    return True
+    Verifica o tier do usuário a partir do header X-API-Key.
+
+    Retorna dict com:
+    - tier: "free" ou "paid"
+    - api_key: a chave usada (ou None para tier free)
+    - daily_limit: limite diário do tier
+
+    Regras:
+    - Sem X-API-Key ou chave vazia → tier free (FREE_TIER_DAILY_LIMIT/dia)
+    - X-API-Key não vazia → tier pago (PAID_TIER_DAILY_LIMIT/dia)
+    """
+    api_key = headers.get("x-api-key", "").strip()
+
+    if api_key:
+        return {
+            "tier": TIER_PAID,
+            "api_key": api_key,
+            "daily_limit": PAID_TIER_DAILY_LIMIT,
+        }
+
+    return {
+        "tier": TIER_FREE,
+        "api_key": None,
+        "daily_limit": FREE_TIER_DAILY_LIMIT,
+    }

@@ -6,7 +6,7 @@
 |---|---|---|
 | Sprint 1 — Identidade + Endereço | ✅ Completo | consultar_cnpj, validar_cpf, buscar_cep |
 | Sprint 2 — Pagamentos + Calendário | ✅ Completo | PIX, feriados, dias úteis |
-| Sprint 3 — Utilidades + Monetização | ⬜ Planejado | Moeda, telefone, API keys |
+| Sprint 3 — Utilidades + Monetização | ✅ Completo | Moeda, telefone, API keys |
 
 ---
 
@@ -54,18 +54,18 @@
 ## Sprint 3 — Utilidades + Monetização
 **Objetivo:** ferramentas complementares e sistema de API keys para monetizar.
 
-### `src/tools/utilidades.py` (placeholder criado)
-- [ ] `converter_moeda(valor, de, para)` — cotação via AwesomeAPI
-- [ ] `validar_telefone_br(telefone)` — valida número brasileiro
-- [ ] `formatar_telefone_br(telefone)` — formata com DDD
-- [ ] `buscar_banco_por_codigo(codigo)` — nome do banco via BrasilAPI
-- [ ] `listar_ddd_estados()` — mapa DDD → estado
+### `src/tools/utilidades.py`
+- [x] `converter_moeda(valor, de, para)` — cotação via AwesomeAPI
+- [x] `validar_telefone_br(telefone)` — valida número brasileiro
+- [x] `formatar_telefone_br(telefone)` — formata com DDD
+- [x] `buscar_banco_por_codigo(codigo)` — nome do banco via BrasilAPI
+- [x] `listar_ddd_estados()` — mapa DDD → estado
 
 ### Monetização
-- [x] `src/middleware/auth.py` — placeholder (sempre retorna True)
-- [x] `src/middleware/rate_limit.py` — placeholder (sempre retorna True)
-- [ ] Implementar autenticação real por API key
-- [ ] Implementar rate limiting real por tier
+- [x] `src/middleware/auth.py` — validação de API key por tier (free/paid)
+- [x] `src/middleware/rate_limit.py` — rate limiting por IP/API key em memória
+- [ ] Página de cadastro para API key paga
+- [ ] Documentação de preços e tiers
 - [ ] Página de cadastro para API key paga
 - [ ] Documentação de preços e tiers
 

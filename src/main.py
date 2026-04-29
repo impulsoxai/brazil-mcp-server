@@ -6,10 +6,7 @@ from starlette.responses import JSONResponse
 from mcp.server.fastmcp import FastMCP
 
 from src.config import MCP_PORT, MCP_ENV
-from src.tools import identidade, endereco, pagamentos, calendario
-
-# Placeholder imports para Sprints futuros
-# from src.tools import utilidades
+from src.tools import identidade, endereco, pagamentos, calendario, utilidades
 
 mcp = FastMCP(
     "Brazil MCP Server",
@@ -22,9 +19,7 @@ identidade.register_tools(mcp)
 endereco.register_tools(mcp)
 pagamentos.register_tools(mcp)
 calendario.register_tools(mcp)
-
-# Placeholder: registrar módulos futuros
-# utilidades.register_tools(mcp)
+utilidades.register_tools(mcp)
 
 
 @mcp.custom_route("/health", methods=["GET"])
