@@ -6,10 +6,10 @@ from starlette.responses import JSONResponse
 from mcp.server.fastmcp import FastMCP
 
 from src.config import MCP_PORT, MCP_ENV
-from src.tools import identidade, endereco
+from src.tools import identidade, endereco, pagamentos, calendario
 
 # Placeholder imports para Sprints futuros
-# from src.tools import pagamentos, calendario, utilidades
+# from src.tools import utilidades
 
 mcp = FastMCP(
     "Brazil MCP Server",
@@ -20,10 +20,10 @@ mcp = FastMCP(
 # Registrar módulos de ferramentas
 identidade.register_tools(mcp)
 endereco.register_tools(mcp)
+pagamentos.register_tools(mcp)
+calendario.register_tools(mcp)
 
 # Placeholder: registrar módulos futuros
-# pagamentos.register_tools(mcp)
-# calendario.register_tools(mcp)
 # utilidades.register_tools(mcp)
 
 
