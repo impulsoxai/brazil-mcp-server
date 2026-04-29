@@ -7,7 +7,8 @@ load_dotenv()
 
 # Ambiente
 MCP_ENV = os.getenv("MCP_ENV", "development")
-MCP_PORT = int(os.getenv("MCP_PORT", "8000"))
+# Railway define PORT automaticamente; MCP_PORT é fallback para dev local
+MCP_PORT = int(os.getenv("PORT", os.getenv("MCP_PORT", "8000")))
 
 # Rate limiting
 FREE_TIER_DAILY_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "100"))

@@ -1,8 +1,6 @@
 """Entry point do Brazil MCP Server."""
 
 import sys
-import json
-import uvicorn
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from mcp.server.fastmcp import FastMCP
@@ -13,7 +11,11 @@ from src.tools import identidade, endereco
 # Placeholder imports para Sprints futuros
 # from src.tools import pagamentos, calendario, utilidades
 
-mcp = FastMCP("Brazil MCP Server")
+mcp = FastMCP(
+    "Brazil MCP Server",
+    host="0.0.0.0",
+    port=MCP_PORT,
+)
 
 # Registrar módulos de ferramentas
 identidade.register_tools(mcp)
@@ -33,9 +35,4 @@ async def health(request: Request) -> JSONResponse:
 
 if __name__ == "__main__":
     print(f"Iniciando Brazil MCP Server (env={MCP_ENV}, port={MCP_PORT})", file=sys.stderr)
-    uvicorn.run(
-        "src.main:mcp",
-        host="0.0.0.0",
-        port=MCP_PORT,
-        reload=MCP_ENV == "development",
-    )
+    mcp.run(transport="streamable-http")
