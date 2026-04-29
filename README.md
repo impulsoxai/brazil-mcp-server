@@ -110,5 +110,5 @@ PRs são bem-vindos! Veja [CONTRIBUTING.md](CONTRIBUTING.md) para o guia de cont
 ### Contato
 
 - Site: [impulsoxai.com.br](https://impulsoxai.com.br)
-- Email: contato@impulsoxai.com.br
+- Email: (impulsoxai@gmail.com)
 - GitHub: [@impulsoxai](https://github.com/impulsoxai)
