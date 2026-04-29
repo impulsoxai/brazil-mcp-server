@@ -30,7 +30,7 @@ def register_tools(mcp: FastMCP) -> None:
             )
 
         try:
-            response = await http_client.get(f"{BRASIL_API_BASE}/cep/{cep_limpo}")
+            response = await http_client.get(f"{BRASIL_API_BASE}/cep/v1/{cep_limpo}")
             response.raise_for_status()
             data = response.json()
         except Exception as e:
