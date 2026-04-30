@@ -110,9 +110,9 @@ def register_tools(mcp: FastMCP) -> None:
                 response.raise_for_status()
                 data = response.json()
         except Exception as e:
-            print(f"Erro ao buscar CEPs: {e}", file=sys.stderr)
+            print(f"Erro ao buscar CEPs ViaCEP: {type(e).__name__}: {e}", file=sys.stderr)
             return (
-                "❌ Erro ao buscar CEPs pelo logradouro.\n"
+                f"❌ Erro ao buscar CEPs: {type(e).__name__}.\n"
                 "Dica: tente novamente ou informe o UF para melhorar a busca (ex: SP)."
             )
 
