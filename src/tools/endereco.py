@@ -1,7 +1,6 @@
 """Módulo de endereço — CEP, logradouro, coordenadas."""
 
 import sys
-import httpx
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros
@@ -105,10 +104,9 @@ def register_tools(mcp: FastMCP) -> None:
             url = f"https://viacep.com.br/ws/{cidade_encoded}/{logradouro_encoded}/json/"
 
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
+            response = await http_client.get(url)
+            response.raise_for_status()
+            data = response.json()
         except Exception as e:
             print(f"Erro ao buscar CEPs ViaCEP: {type(e).__name__}: {e}", file=sys.stderr)
             return (

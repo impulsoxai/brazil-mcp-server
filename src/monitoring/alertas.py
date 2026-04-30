@@ -4,10 +4,6 @@ import sys
 import os
 from datetime import datetime, timezone
 
-# Contadores de falhas por ferramenta (resetam a cada chamada bem-sucedida)
-_falhas_consecutivas: dict[str, int] = {}
-_LIMITE_FALHAS = 3
-
 
 async def enviar_alerta(mensagem: str, nivel: str = "info") -> None:
     """
@@ -40,19 +36,3 @@ async def enviar_alerta(mensagem: str, nivel: str = "info") -> None:
                 print(f"[ALERTA] Falha ao enviar Telegram: {resp.status_code}", file=sys.stderr)
     except Exception as e:
         print(f"[ALERTA] Erro ao enviar Telegram: {e}", file=sys.stderr)
-
-
-def registrar_falha(ferramenta: str) -> int:
-    """Registra falha consecutiva de uma ferramenta. Retorna total de falhas."""
-    _falhas_consecutivas[ferramenta] = _falhas_consecutivas.get(ferramenta, 0) + 1
-    return _falhas_consecutivas[ferramenta]
-
-
-def registrar_sucesso(ferramenta: str) -> None:
-    """Reseta contador de falhas de uma ferramenta."""
-    _falhas_consecutivas.pop(ferramenta, None)
-
-
-def obter_falhas(ferramenta: str) -> int:
-    """Retorna número de falhas consecutivas de uma ferramenta."""
-    return _falhas_consecutivas.get(ferramenta, 0)
