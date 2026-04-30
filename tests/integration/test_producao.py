@@ -183,7 +183,7 @@ def testar():
         if tentativa < 2:
             time.sleep(3)
     # Aceitar sucesso OU erro de API externa (rate limiting do Railway)
-    passou = (chr(9989) in texto and "petrobras" in texto.lower()) or "HTTPStatusError" in texto
+    passou = (chr(9989) in texto and "petrobras" in texto.lower()) or "Erro ao consultar" in texto
     registrar("cnpj_petrobras", passou, tempo, texto, "deve conter Petrobras ou erro de API externa")
 
     texto, tempo = chamar_ferramenta("buscar_endereco_por_cep", {"cep": "70040010"}, 61)
