@@ -1,6 +1,7 @@
 """Módulo de endereço — CEP, logradouro, coordenadas."""
 
 import sys
+import httpx
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros
@@ -70,16 +71,22 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def buscar_ceps_por_logradouro(logradouro: str, cidade: str) -> str:
+    async def buscar_ceps_por_logradouro(logradouro: str, cidade: str, uf: str = "") -> str:
         """
         Busca CEPs por nome de logradouro e cidade.
 
         Use quando o usuário sabe o nome da rua mas não o CEP.
         Retorna uma lista de CEPs correspondentes.
-        Consulta a BrasilAPI em tempo real.
+        Consulta a ViaCEP em tempo real.
+
+        Parâmetros:
+        - logradouro: nome da rua (ex: "Paulista")
+        - cidade: nome da cidade (ex: "São Paulo")
+        - uf: sigla do estado opcional (ex: "SP") — melhora a precisão da busca
         """
         logradouro = _sanitizar_input(logradouro, 200)
         cidade = _sanitizar_input(cidade, 100)
+        uf = _sanitizar_input(uf, 10).upper()
 
         if not logradouro or not cidade:
             return (
@@ -87,19 +94,35 @@ def register_tools(mcp: FastMCP) -> None:
                 "Dica: informe o nome da rua e a cidade para buscar os CEPs."
             )
 
+        # ViaCEP: /ws/{UF}/{cidade}/{logradouro}/json/
+        cidade_encoded = cidade.replace(" ", "%20")
+        logradouro_encoded = logradouro.replace(" ", "%20")
+
+        if uf:
+            url = f"https://viacep.com.br/ws/{uf}/{cidade_encoded}/{logradouro_encoded}/json/"
+        else:
+            # Sem UF, tentar com cidade e logradouro apenas
+            url = f"https://viacep.com.br/ws/{cidade_encoded}/{logradouro_encoded}/json/"
+
         try:
-            url = f"{BRASIL_API_BASE}/cep/v1/{logradouro}"
-            response = await http_client.get(url, params={"city": cidade})
-            response.raise_for_status()
-            data = response.json()
+            async with httpx.AsyncClient(timeout=10) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
         except Exception as e:
             print(f"Erro ao buscar CEPs: {e}", file=sys.stderr)
             return (
                 "❌ Erro ao buscar CEPs pelo logradouro.\n"
-                "Dica: tente novamente ou verifique se o nome da rua está correto."
+                "Dica: tente novamente ou informe o UF para melhorar a busca (ex: SP)."
             )
 
-        if not data:
+        if not data or (isinstance(data, list) and len(data) == 0):
+            return (
+                f"❌ Nenhum CEP encontrado para '{logradouro}' em {cidade}.\n"
+                "Dica: verifique se o nome da rua e a cidade estão corretos."
+            )
+
+        if isinstance(data, dict) and data.get("erro"):
             return (
                 f"❌ Nenhum CEP encontrado para '{logradouro}' em {cidade}.\n"
                 "Dica: verifique se o nome da rua e a cidade estão corretos."
@@ -108,8 +131,8 @@ def register_tools(mcp: FastMCP) -> None:
         results = []
         for item in (data if isinstance(data, list) else [data])[:10]:
             cep = item.get("cep", "")
-            street = item.get("street", item.get("logradouro", ""))
-            neighborhood = item.get("neighborhood", item.get("bairro", ""))
+            street = item.get("logradouro", "")
+            neighborhood = item.get("bairro", "")
             results.append(f"  • {formatar_cep(cep)} — {street} ({neighborhood})")
 
         return (
