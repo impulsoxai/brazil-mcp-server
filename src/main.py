@@ -32,10 +32,20 @@ async def health(request: Request) -> JSONResponse:
 
 if __name__ == "__main__":
     print(f"Iniciando Brazil MCP Server (env={MCP_ENV}, port={MCP_PORT})", file=sys.stderr)
+
+    # Alerta de startup via Telegram (não bloqueia se falhar)
+    async def _startup_alert():
+        try:
+            await enviar_alerta(f"Servidor iniciado — env={MCP_ENV}, port={MCP_PORT}", "info")
+        except Exception as e:
+            print(f"[STARTUP] Falha ao enviar alerta Telegram: {e}", file=sys.stderr)
+
     try:
-        asyncio.get_event_loop().run_until_complete(
-            enviar_alerta(f"Servidor iniciado — env={MCP_ENV}, port={MCP_PORT}", "info")
-        )
-    except Exception:
-        pass
+        asyncio.run(_startup_alert())
+    except RuntimeError:
+        # Event loop já existe — usar create_task
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(_startup_alert())
+        loop.close()
+
     mcp.run(transport="streamable-http")
