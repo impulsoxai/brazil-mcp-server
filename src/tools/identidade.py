@@ -37,9 +37,9 @@ def register_tools(mcp: FastMCP) -> None:
             response.raise_for_status()
             data = response.json()
         except Exception as e:
-            print(f"Erro ao consultar CNPJ: {e}", file=sys.stderr)
+            print(f"Erro ao consultar CNPJ {cnpj_limpo}: {type(e).__name__}: {e}", file=sys.stderr)
             return (
-                "❌ Erro ao consultar o CNPJ na base de dados.\n"
+                f"❌ Erro ao consultar o CNPJ {cnpj} na base de dados: {type(e).__name__}.\n"
                 "Dica: tente novamente em alguns segundos ou verifique sua conexão."
             )
 
