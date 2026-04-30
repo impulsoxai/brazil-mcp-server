@@ -23,3 +23,7 @@ HTTP_TIMEOUT = 10.0
 
 # Monitoramento
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+# Telegram (alertas)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")

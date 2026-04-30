@@ -9,6 +9,11 @@ from src.utils import http_client
 from src.config import BRASIL_API_BASE
 
 
+def _sanitizar_input(valor: str, max_len: int = 500) -> str:
+    """Trunca e remove caracteres de controle de uma string."""
+    return valor[:max_len].strip()
+
+
 def register_tools(mcp: FastMCP) -> None:
     """Registra as ferramentas de identidade no servidor MCP."""
 
@@ -24,6 +29,7 @@ def register_tools(mcp: FastMCP) -> None:
         O CNPJ pode ser enviado com ou sem formatação (14 dígitos ou XX.XXX.XXX/XXXX-XX).
         Retorna erro descritivo se o CNPJ for inválido ou a empresa não for encontrada.
         """
+        cnpj = _sanitizar_input(cnpj)
         cnpj_limpo = limpar_numeros(cnpj)
 
         if not validar_cnpj(cnpj_limpo):
@@ -39,7 +45,7 @@ def register_tools(mcp: FastMCP) -> None:
         except Exception as e:
             print(f"Erro ao consultar CNPJ {cnpj_limpo}: {type(e).__name__}: {e}", file=sys.stderr)
             return (
-                f"❌ Erro ao consultar o CNPJ {cnpj} na base de dados: {type(e).__name__}.\n"
+                f"❌ Erro ao consultar o CNPJ {cnpj} na base de dados.\n"
                 "Dica: tente novamente em alguns segundos ou verifique sua conexão."
             )
 
@@ -78,12 +84,11 @@ def register_tools(mcp: FastMCP) -> None:
 
         cnae = f"{cnae_cod} — {cnae_desc}" if cnae_cod else cnae_desc
 
-        # QSA (sócios)
         qsa = data.get("qsa", [])
         socios = ""
         if qsa:
             socios_lines = []
-            for socio in qsa[:10]:  # limita a 10 sócios
+            for socio in qsa[:10]:
                 nome = socio.get("nome_socio", "")
                 qualificacao = socio.get("qualificacao_socio", "")
                 if nome:
@@ -111,6 +116,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use para verificar se um CNPJ é válido sem consultar a base de dados.
         Aceita com ou sem formatação. Retorna se é válido e o CNPJ formatado.
         """
+        cnpj = _sanitizar_input(cnpj)
         cnpj_limpo = limpar_numeros(cnpj)
         cnpj_formatado = formatar_cnpj(cnpj_limpo)
 
@@ -130,6 +136,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use para verificar se um CPF é válido sem consultar a base de dados.
         Aceita com ou sem formatação. Retorna se é válido e o CPF formatado.
         """
+        cpf = _sanitizar_input(cpf)
         cpf_limpo = limpar_numeros(cpf)
         cpf_formatado = formatar_cpf(cpf_limpo)
 
@@ -149,6 +156,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando precisar exibir um CPF de forma legível.
         Entrada: '12345678901' → Saída: '123.456.789-01'
         """
+        cpf = _sanitizar_input(cpf)
         cpf_limpo = limpar_numeros(cpf)
 
         if len(cpf_limpo) != 11:
@@ -169,6 +177,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando precisar exibir um CNPJ de forma legível.
         Entrada: '12345678000199' → Saída: '12.345.678/0001-99'
         """
+        cnpj = _sanitizar_input(cnpj)
         cnpj_limpo = limpar_numeros(cnpj)
 
         if len(cnpj_limpo) != 14:

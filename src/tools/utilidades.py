@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from src.utils.validators import limpar_numeros
 from src.utils.formatters import formatar_telefone_br
 from src.utils import http_client
+from src.utils.cache import get_cached, set_cached, TTL_MOEDA, TTL_BANCO, TTL_DDD
 from src.config import BRASIL_API_BASE, EXCHANGE_RATE_API_BASE
 
 
@@ -55,45 +56,58 @@ def register_tools(mcp: FastMCP) -> None:
         Converte um valor entre moedas usando cotação em tempo real.
 
         Use quando precisar converter BRL para outra moeda ou entre moedas estrangeiras.
-        Consulta o ExchangeRate-API em tempo real.
+        Consulta o ExchangeRate-API com cache de 5 minutos.
         Exemplos: converter_moeda(100, "BRL", "USD"), converter_moeda(50, "USD", "BRL")
 
         Parâmetros:
-        - valor: valor a converter (ex: 100.00)
+        - valor: valor a converter (máx R$ 999.999.999)
         - de: moeda de origem (ex: "BRL", "USD", "EUR")
         - para: moeda de destino (ex: "USD", "BRL", "EUR")
         """
-        de = de.strip().upper()
-        para = para.strip().upper()
+        de = de.strip().upper()[:10]
+        para = para.strip().upper()[:10]
 
         if valor <= 0:
             return "❌ O valor deve ser maior que zero."
 
+        if valor > 999_999_999:
+            return (
+                f"❌ Valor excede o limite: R$ {valor:,.2f} (máx R$ 999.999.999).\n"
+                "Dica: use um valor menor."
+            )
+
         if de == para:
             return f"✅ Conversão: {de} = {para}.\nValor: {valor:.2f} (mesma moeda, sem conversão)."
 
-        try:
-            url = f"{EXCHANGE_RATE_API_BASE}/latest/{de}"
-            response = await http_client.get(url)
-            response.raise_for_status()
-            data = response.json()
-        except Exception as e:
-            print(f"Erro ao converter moeda: {e}", file=sys.stderr)
-            return (
-                f"❌ Erro ao consultar cotação {de}/{para}.\n"
-                "Dica: verifique se os códigos de moeda são válidos (ex: BRL, USD, EUR)."
-            )
+        cache_key = f"cotacao:{de}:{para}"
+        cached = get_cached(cache_key)
+        if cached is not None:
+            taxa = cached
+        else:
+            try:
+                url = f"{EXCHANGE_RATE_API_BASE}/latest/{de}"
+                response = await http_client.get(url)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                print(f"Erro ao converter moeda: {e}", file=sys.stderr)
+                return (
+                    f"❌ Erro ao consultar cotação {de}/{para}.\n"
+                    "Dica: verifique se os códigos de moeda são válidos (ex: BRL, USD, EUR)."
+                )
 
-        rates = data.get("rates", {})
-        if para not in rates:
-            return (
-                f"❌ Moeda de destino não encontrada: {para}.\n"
-                "Dica: verifique se o código da moeda é válido (ex: BRL, USD, EUR)."
-            )
+            rates = data.get("rates", {})
+            if para not in rates:
+                return (
+                    f"❌ Moeda de destino não encontrada: {para}.\n"
+                    "Dica: verifique se o código da moeda é válido (ex: BRL, USD, EUR)."
+                )
 
-        taxa = float(rates[para])
-        if taxa <= 0:
-            return f"❌ Cotação inválida para {de}/{para}."
+            taxa = float(rates[para])
+            if taxa <= 0:
+                return f"❌ Cotação inválida para {de}/{para}."
+
+            set_cached(cache_key, taxa, TTL_MOEDA)
 
         convertido = valor * taxa
 
@@ -112,18 +126,17 @@ def register_tools(mcp: FastMCP) -> None:
         Aceita formatos com ou sem DDD, com ou sem formatação.
         Valida: DDD (11-99), tamanho (10 fixo, 11 celular) e dígito inicial do celular (9).
         """
-        numeros = limpar_numeros(telefone)
+        numeros = limpar_numeros(telefone[:50])
 
         if not numeros:
             return "❌ Telefone vazio. Informe o número com DDD."
 
-        # Remover código do país se presente
         if numeros.startswith("55") and len(numeros) in (12, 13):
             numeros = numeros[2:]
 
         if len(numeros) not in (10, 11):
             return (
-                f"❌ Telefone inválido: '{telefone}' ({len(limpar_numeros(telefone))} dígitos).\n"
+                f"❌ Telefone inválido: '{telefone}' ({len(limpar_numeros(telefone[:50]))} dígitos).\n"
                 "Dica: telefone fixo tem 10 dígitos, celular tem 11 dígitos (com o 9)."
             )
 
@@ -159,9 +172,8 @@ def register_tools(mcp: FastMCP) -> None:
         Celular (11 dígitos): (XX) XXXXX-XXXX
         Fixo (10 dígitos): (XX) XXXX-XXXX
         """
-        numeros = limpar_numeros(telefone)
+        numeros = limpar_numeros(telefone[:50])
 
-        # Remover código do país se presente
         if numeros.startswith("55") and len(numeros) in (12, 13):
             numeros = numeros[2:]
 
@@ -182,24 +194,30 @@ def register_tools(mcp: FastMCP) -> None:
         Busca dados de um banco brasileiro pelo código COMPE.
 
         Use quando precisar identificar um banco pelo código (ex: 001 = Banco do Brasil,
-        341 = Itaú, 237 = Bradesco). Consulta a BrasilAPI em tempo real.
+        341 = Itaú, 237 = Bradesco). Consulta a BrasilAPI com cache de 1h.
         """
-        codigo = limpar_numeros(codigo)
+        codigo = limpar_numeros(codigo[:10])
 
         if not codigo:
             return "❌ Código do banco é obrigatório. Ex: 001, 341, 237."
 
-        try:
-            url = f"{BRASIL_API_BASE}/banks/v1/{codigo}"
-            response = await http_client.get(url)
-            response.raise_for_status()
-            data = response.json()
-        except Exception as e:
-            print(f"Erro ao buscar banco: {e}", file=sys.stderr)
-            return (
-                f"❌ Banco com código '{codigo}' não encontrado.\n"
-                "Dica: verifique se o código COMPE está correto (ex: 001, 341, 237)."
-            )
+        cache_key = f"banco:{codigo}"
+        cached = get_cached(cache_key)
+        if cached is not None:
+            data = cached
+        else:
+            try:
+                url = f"{BRASIL_API_BASE}/banks/v1/{codigo}"
+                response = await http_client.get(url)
+                response.raise_for_status()
+                data = response.json()
+                set_cached(cache_key, data, TTL_BANCO)
+            except Exception as e:
+                print(f"Erro ao buscar banco: {e}", file=sys.stderr)
+                return (
+                    f"❌ Banco com código '{codigo}' não encontrado.\n"
+                    "Dica: verifique se o código COMPE está correto (ex: 001, 341, 237)."
+                )
 
         nome = data.get("name", data.get("fullName", "Não informado"))
         codigo_compe = data.get("code", data.get("ispb", codigo))
@@ -220,7 +238,6 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando precisar identificar a região de um DDD ou listar todos os DDDs.
         Retorna todos os 67 DDDs do Brasil organizados por estado.
         """
-        # Organizar por região para melhor leitura
         regioes = {
             "Sudeste": ["SP", "RJ", "MG", "ES"],
             "Sul": ["PR", "SC", "RS"],
@@ -229,7 +246,6 @@ def register_tools(mcp: FastMCP) -> None:
             "Norte": ["PA", "AM", "RR", "AP", "TO", "RO", "AC"],
         }
 
-        # Mapear DDDs por estado
         estado_ddds: dict[str, list[str]] = {}
         for ddd, estado in _DDD_ESTADOS.items():
             estado_ddds.setdefault(estado, []).append(ddd)

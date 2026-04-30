@@ -5,16 +5,13 @@ from datetime import date, datetime, timedelta
 from mcp.server.fastmcp import FastMCP
 
 from src.utils import http_client
+from src.utils.cache import get_cached, set_cached, TTL_FERIADOS
 from src.config import BRASIL_API_BASE
-
-
-# Cache de feriados por ano para evitar chamadas repetidas
-_cache_feriados: dict[int, set[str]] = {}
 
 
 def _parse_data(data_str: str) -> date | None:
     """Converte string de data para objeto date. Aceita YYYY-MM-DD ou DD/MM/YYYY."""
-    data_str = data_str.strip()
+    data_str = data_str.strip()[:500]
     for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
         try:
             return date.fromisoformat(data_str) if fmt == "%Y-%m-%d" else datetime.strptime(data_str, fmt).date()
@@ -29,9 +26,11 @@ def _formatar_data(d: date) -> str:
 
 
 async def _obter_feriados(ano: int) -> set[str]:
-    """Obtém feriados nacionais do BrasilAPI. Retorna set de datas no formato MM-DD."""
-    if ano in _cache_feriados:
-        return _cache_feriados[ano]
+    """Obtém feriados nacionais do BrasilAPI. Usa cache de 24h."""
+    cache_key = f"feriados:{ano}"
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
 
     try:
         response = await http_client.get(f"{BRASIL_API_BASE}/feriados/v1/{ano}")
@@ -42,12 +41,11 @@ async def _obter_feriados(ano: int) -> set[str]:
         for feriado in data:
             dt = feriado.get("date", "")
             if dt:
-                # API retorna YYYY-MM-DD, pegamos MM-DD
                 partes = dt.split("-")
                 if len(partes) == 3:
                     feriados.add(f"{partes[1]}-{partes[2]}")
 
-        _cache_feriados[ano] = feriados
+        set_cached(cache_key, feriados, TTL_FERIADOS)
         return feriados
     except Exception as e:
         print(f"Erro ao buscar feriados de {ano}: {e}", file=sys.stderr)
@@ -62,7 +60,7 @@ def _eh_feriado(d: date, feriados: set[str]) -> bool:
 
 def _eh_dia_util(d: date, feriados: set[str]) -> bool:
     """Verifica se uma data é dia útil (não é fim de semana nem feriado)."""
-    if d.weekday() >= 5:  # Sábado (5) ou Domingo (6)
+    if d.weekday() >= 5:
         return False
     return not _eh_feriado(d, feriados)
 
@@ -84,25 +82,31 @@ def register_tools(mcp: FastMCP) -> None:
         Lista os feriados nacionais do Brasil para um determinado ano.
 
         Use quando precisar saber os feriados oficiais brasileiros.
-        Consulta a BrasilAPI em tempo real.
-        Aceita anos entre 1900 e 2100.
+        Consulta a BrasilAPI com cache de 24h.
+        Aceita anos entre 2000 e 2100.
         """
-        if ano < 1900 or ano > 2100:
+        if ano < 2000 or ano > 2100:
             return (
                 f"❌ Ano inválido: {ano}.\n"
-                "Dica: informe um ano entre 1900 e 2100."
+                "Dica: informe um ano entre 2000 e 2100."
             )
 
-        try:
-            response = await http_client.get(f"{BRASIL_API_BASE}/feriados/v1/{ano}")
-            response.raise_for_status()
-            data = response.json()
-        except Exception as e:
-            print(f"Erro ao buscar feriados: {e}", file=sys.stderr)
-            return (
-                "❌ Erro ao consultar feriados na BrasilAPI.\n"
-                "Dica: tente novamente em alguns segundos."
-            )
+        cache_key = f"feriados_raw:{ano}"
+        cached = get_cached(cache_key)
+        if cached is not None:
+            data = cached
+        else:
+            try:
+                response = await http_client.get(f"{BRASIL_API_BASE}/feriados/v1/{ano}")
+                response.raise_for_status()
+                data = response.json()
+                set_cached(cache_key, data, TTL_FERIADOS)
+            except Exception as e:
+                print(f"Erro ao buscar feriados: {e}", file=sys.stderr)
+                return (
+                    "❌ Erro ao consultar feriados na BrasilAPI.\n"
+                    "Dica: tente novamente em alguns segundos."
+                )
 
         if not data:
             return f"❌ Nenhum feriado encontrado para o ano {ano}."
@@ -111,9 +115,7 @@ def register_tools(mcp: FastMCP) -> None:
         for feriado in data:
             nome = feriado.get("name", feriado.get("nome", ""))
             dt = feriado.get("date", "")
-            tipo = feriado.get("type", feriado.get("tipo", ""))
             if dt and nome:
-                # Formatar data YYYY-MM-DD → DD/MM/YYYY
                 partes = dt.split("-")
                 if len(partes) == 3:
                     dt_fmt = f"{partes[2]}/{partes[1]}/{partes[0]}"
@@ -160,6 +162,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use para calcular prazos bancários, vencimentos ou SLAs.
         Considera feriados nacionais e fins de semana.
         Aceita formato YYYY-MM-DD ou DD/MM/YYYY.
+        Máximo: 3650 dias úteis (10 anos).
         """
         d = _parse_data(data_inicio)
         if d is None:
@@ -171,6 +174,12 @@ def register_tools(mcp: FastMCP) -> None:
         if dias_uteis < 0:
             return "❌ O número de dias úteis não pode ser negativo."
 
+        if dias_uteis > 3650:
+            return (
+                f"❌ Limite excedido: {dias_uteis} dias úteis (máximo 3650).\n"
+                "Dica: use um período de até 10 anos."
+            )
+
         if dias_uteis == 0:
             return (
                 f"✅ Prazo de 0 dias úteis.\n"
@@ -178,9 +187,8 @@ def register_tools(mcp: FastMCP) -> None:
                 f"Data final: {_formatar_data(d)}"
             )
 
-        # Buscar feriados do ano inicial e possivelmente do ano seguinte
         feriados = await _obter_feriados(d.year)
-        if d.month >= 11:  # Se estamos no final do ano, buscar feriados do próximo também
+        if d.month >= 11:
             feriados_prox = await _obter_feriados(d.year + 1)
             feriados = feriados | feriados_prox
 

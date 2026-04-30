@@ -9,6 +9,11 @@ from src.utils import http_client
 from src.config import BRASIL_API_BASE
 
 
+def _sanitizar_input(valor: str, max_len: int = 500) -> str:
+    """Trunca e remove caracteres de controle de uma string."""
+    return valor[:max_len].strip()
+
+
 def register_tools(mcp: FastMCP) -> None:
     """Registra as ferramentas de endereço no servidor MCP."""
 
@@ -21,6 +26,7 @@ def register_tools(mcp: FastMCP) -> None:
         Aceita CEP com ou sem formatação (8 dígitos ou XXXXX-XXX).
         Consulta a BrasilAPI em tempo real.
         """
+        cep = _sanitizar_input(cep)
         cep_limpo = limpar_numeros(cep)
 
         if len(cep_limpo) != 8:
@@ -72,6 +78,9 @@ def register_tools(mcp: FastMCP) -> None:
         Retorna uma lista de CEPs correspondentes.
         Consulta a BrasilAPI em tempo real.
         """
+        logradouro = _sanitizar_input(logradouro, 200)
+        cidade = _sanitizar_input(cidade, 100)
+
         if not logradouro or not cidade:
             return (
                 "❌ Parâmetros obrigatórios: logradouro e cidade.\n"
@@ -124,6 +133,14 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando precisar exibir um endereço de forma organizada.
         Parâmetros obrigatórios: logradouro, cidade, uf.
         """
+        logradouro = _sanitizar_input(logradouro, 300)
+        cidade = _sanitizar_input(cidade, 100)
+        uf = _sanitizar_input(uf, 10)
+        numero = _sanitizar_input(numero, 20)
+        complemento = _sanitizar_input(complemento, 100)
+        bairro = _sanitizar_input(bairro, 100)
+        cep = _sanitizar_input(cep, 20)
+
         if not logradouro or not cidade or not uf:
             return (
                 "❌ Parâmetros obrigatórios: logradouro, cidade e uf.\n"
