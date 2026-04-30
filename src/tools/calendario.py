@@ -1,7 +1,7 @@
 """Módulo de calendário — feriados, dias úteis, prazos."""
 
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from mcp.server.fastmcp import FastMCP
 
 from src.utils import http_client
@@ -17,7 +17,7 @@ def _parse_data(data_str: str) -> date | None:
     data_str = data_str.strip()
     for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
         try:
-            return date.fromisoformat(data_str) if fmt == "%Y-%m-%d" else date.strptime(data_str, fmt)
+            return date.fromisoformat(data_str) if fmt == "%Y-%m-%d" else datetime.strptime(data_str, fmt).date()
         except ValueError:
             continue
     return None
