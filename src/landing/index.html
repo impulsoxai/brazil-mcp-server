@@ -713,13 +713,6 @@ const initialValues = (tool) => {
 
 const isEmpty = (v) => v === '' || v === undefined || v === null;
 
-const _fmtBR = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-const formatarBR = (texto) => {
-  return texto.replace(/\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?!\d)/g, (match) => {
-    return _fmtBR.format(Number(match.replace(/,/g, '')));
-  });
-};
-
 const highlightJSON = (obj) => {
   const json = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
   const escaped = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -730,8 +723,7 @@ const highlightJSON = (obj) => {
       if(/^"/.test(m)) c=/:$/.test(m)?'jn-key':'jn-str';
       else if(/true|false/.test(m)) c='jn-bool';
       else if(/null/.test(m)) c='jn-null';
-      const display = c==='jn-num' ? formatarBR(m) : m;
-      return '<span class="'+c+'">'+display+'</span>';
+      return '<span class="'+c+'">'+m+'</span>';
     }
   );
 };
