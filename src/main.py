@@ -15,6 +15,7 @@ mcp = FastMCP(
     "Brazil MCP Server",
     host="0.0.0.0",
     port=MCP_PORT,
+    stateless_http=True,
 )
 
 # Registrar módulos de ferramentas
