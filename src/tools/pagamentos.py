@@ -2,6 +2,9 @@
 
 import re
 import sys
+from typing import Annotated
+
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj
@@ -53,11 +56,11 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def gerar_pix_copia_cola(
-        chave: str,
-        valor: float,
-        nome: str,
-        cidade: str,
-        descricao: str = "",
+        chave: Annotated[str, Field(description="Chave PIX do recebedor (CPF, CNPJ, email, telefone ou UUID aleatória)")],
+        valor: Annotated[float, Field(description="Valor em reais (máx R$ 999.999.999)")],
+        nome: Annotated[str, Field(description="Nome do recebedor (máx 25 caracteres)")],
+        cidade: Annotated[str, Field(description="Cidade do recebedor (máx 15 caracteres)")],
+        descricao: Annotated[str, Field(description="Descrição opcional da transação (máx 25 caracteres)")] = "",
     ) -> str:
         """
         Gera um payload PIX Copia e Cola (estático) no padrão EMV do Banco Central.
@@ -150,7 +153,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def validar_chave_pix(chave: str) -> str:
+    async def validar_chave_pix(chave: Annotated[str, Field(description="Chave PIX para validar (CPF, CNPJ, email, telefone ou UUID)")]) -> str:
         """
         Valida o tipo e formato de uma chave PIX.
 
@@ -179,9 +182,9 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def calcular_juros_simples(
-        principal: float,
-        taxa_mensal: float,
-        meses: int,
+        principal: Annotated[float, Field(description="Valor original em reais (máx R$ 999.999.999)")],
+        taxa_mensal: Annotated[float, Field(description="Taxa de juros mensal em % (ex: 2.5 para 2,5%)")],
+        meses: Annotated[int, Field(description="Número de meses (máx 600)")],
     ) -> str:
         """
         Calcula juros simples sobre um valor principal.
@@ -222,9 +225,9 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def calcular_juros_compostos(
-        principal: float,
-        taxa_mensal: float,
-        meses: int,
+        principal: Annotated[float, Field(description="Valor original em reais (máx R$ 999.999.999)")],
+        taxa_mensal: Annotated[float, Field(description="Taxa de juros mensal em % (ex: 2.5 para 2,5%)")],
+        meses: Annotated[int, Field(description="Número de meses (máx 600)")],
     ) -> str:
         """
         Calcula juros compostos sobre um valor principal.
@@ -265,8 +268,8 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def calcular_multa_atraso(
-        valor: float,
-        dias_atraso: int,
+        valor: Annotated[float, Field(description="Valor original em reais (máx R$ 999.999.999)")],
+        dias_atraso: Annotated[int, Field(description="Número de dias em atraso (máx 3650)")],
     ) -> str:
         """
         Calcula multa e juros de atraso no padrão brasileiro.

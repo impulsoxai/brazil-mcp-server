@@ -1,6 +1,9 @@
 """Módulo de endereço — CEP, logradouro, coordenadas."""
 
 import sys
+from typing import Annotated
+
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros
@@ -18,7 +21,7 @@ def register_tools(mcp: FastMCP) -> None:
     """Registra as ferramentas de endereço no servidor MCP."""
 
     @mcp.tool()
-    async def buscar_endereco_por_cep(cep: str) -> str:
+    async def buscar_endereco_por_cep(cep: Annotated[str, Field(description="CEP brasileiro (com ou sem formatação, ex: 01310-100 ou 01310100)")]) -> str:
         """
         Busca endereço completo a partir de um CEP brasileiro.
 
@@ -70,7 +73,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def buscar_ceps_por_logradouro(logradouro: str, cidade: str, uf: str = "") -> str:
+    async def buscar_ceps_por_logradouro(logradouro: Annotated[str, Field(description="Nome da rua ou logradouro (ex: 'Paulista')")], cidade: Annotated[str, Field(description="Nome da cidade (ex: 'São Paulo')")], uf: Annotated[str, Field(description="Sigla do estado opcional (ex: 'SP') — melhora a precisão da busca")] = "") -> str:
         """
         Busca CEPs por nome de logradouro e cidade.
 
@@ -140,13 +143,13 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def formatar_endereco_completo(
-        logradouro: str,
-        cidade: str,
-        uf: str,
-        numero: str = "",
-        complemento: str = "",
-        bairro: str = "",
-        cep: str = "",
+        logradouro: Annotated[str, Field(description="Nome da rua, avenida ou logradouro")],
+        cidade: Annotated[str, Field(description="Nome da cidade")],
+        uf: Annotated[str, Field(description="Sigla do estado (ex: 'SP', 'RJ')")],
+        numero: Annotated[str, Field(description="Número do imóvel (opcional)")] = "",
+        complemento: Annotated[str, Field(description="Complemento (apartamento, bloco, etc.) (opcional)")] = "",
+        bairro: Annotated[str, Field(description="Nome do bairro (opcional)")] = "",
+        cep: Annotated[str, Field(description="CEP (opcional)")] = "",
     ) -> str:
         """
         Formata um endereço brasileiro completo em string legível.

@@ -1,6 +1,9 @@
 """Módulo de utilidades — moeda, telefone, banco, DDD."""
 
 import sys
+from typing import Annotated
+
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros
@@ -51,7 +54,7 @@ def register_tools(mcp: FastMCP) -> None:
     """Registra as ferramentas de utilidades no servidor MCP."""
 
     @mcp.tool()
-    async def converter_moeda(valor: float, de: str, para: str) -> str:
+    async def converter_moeda(valor: Annotated[float, Field(description="Valor a converter (máx 999.999.999)")], de: Annotated[str, Field(description="Moeda de origem (ex: 'BRL', 'USD', 'EUR')")], para: Annotated[str, Field(description="Moeda de destino (ex: 'USD', 'BRL', 'EUR')")]) -> str:
         """
         Converte um valor entre moedas usando cotação em tempo real.
 
@@ -119,7 +122,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def validar_telefone_br(telefone: str) -> str:
+    async def validar_telefone_br(telefone: Annotated[str, Field(description="Telefone brasileiro com ou sem formatação (ex: '(11) 98765-4321' ou '11987654321')")]) -> str:
         """
         Valida se um telefone é um número brasileiro válido.
 
@@ -165,7 +168,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def formatar_telefone_br_tool(telefone: str) -> str:
+    async def formatar_telefone_br_tool(telefone: Annotated[str, Field(description="Telefone para formatar (com ou sem formatação)")]) -> str:
         """
         Formata um telefone brasileiro com máscara e DDD.
 
@@ -189,7 +192,7 @@ def register_tools(mcp: FastMCP) -> None:
         return f"✅ Telefone formatado: {telefone_fmt} ({tipo})"
 
     @mcp.tool()
-    async def buscar_banco_por_codigo(codigo: str) -> str:
+    async def buscar_banco_por_codigo(codigo: Annotated[str, Field(description="Código COMPE do banco (ex: '001' = Banco do Brasil, '341' = Itaú)")]) -> str:
         """
         Busca dados de um banco brasileiro pelo código COMPE.
 

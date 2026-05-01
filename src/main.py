@@ -35,6 +35,7 @@ if __name__ == "__main__":
 
     # Alerta de startup via Telegram (não bloqueia se falhar)
     async def _startup_alert():
+        """Envia alerta de startup via Telegram quando o servidor MCP inicializa."""
         try:
             await enviar_alerta(f"Servidor iniciado — env={MCP_ENV}, port={MCP_PORT}", "info")
         except Exception as e:

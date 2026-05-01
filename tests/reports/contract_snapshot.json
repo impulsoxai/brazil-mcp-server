@@ -1,0 +1,800 @@
+{
+  "tools": {
+    "consultar_cnpj": {
+      "name": "consultar_cnpj",
+      "description": "\n        Consulta dados cadastrais completos de uma empresa brasileira pelo CNPJ.\n\n        Use quando precisar verificar: raz\u00e3o social, nome fantasia, situa\u00e7\u00e3o cadastral\n        (ativa/inativa/suspensa), endere\u00e7o completo, CNAE principal, porte da empresa,\n        data de abertura e QSA (quadro de s\u00f3cios).\n\n        O CNPJ pode ser enviado com ou sem formata\u00e7\u00e3o (14 d\u00edgitos ou XX.XXX.XXX/XXXX-XX).\n        Retorna erro descritivo se o CNPJ for inv\u00e1lido ou a empresa n\u00e3o for encontrada.\n        ",
+      "inputSchema": {
+        "properties": {
+          "cnpj": {
+            "title": "Cnpj",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cnpj"
+        ],
+        "title": "consultar_cnpjArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "consultar_cnpjOutput",
+        "type": "object"
+      }
+    },
+    "validar_cnpj_tool": {
+      "name": "validar_cnpj_tool",
+      "description": "\n        Valida matematicamente um CNPJ brasileiro.\n\n        Use para verificar se um CNPJ \u00e9 v\u00e1lido sem consultar a base de dados.\n        Aceita com ou sem formata\u00e7\u00e3o. Retorna se \u00e9 v\u00e1lido e o CNPJ formatado.\n        ",
+      "inputSchema": {
+        "properties": {
+          "cnpj": {
+            "title": "Cnpj",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cnpj"
+        ],
+        "title": "validar_cnpj_toolArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "validar_cnpj_toolOutput",
+        "type": "object"
+      }
+    },
+    "validar_cpf_tool": {
+      "name": "validar_cpf_tool",
+      "description": "\n        Valida matematicamente um CPF brasileiro.\n\n        Use para verificar se um CPF \u00e9 v\u00e1lido sem consultar a base de dados.\n        Aceita com ou sem formata\u00e7\u00e3o. Retorna se \u00e9 v\u00e1lido e o CPF formatado.\n        ",
+      "inputSchema": {
+        "properties": {
+          "cpf": {
+            "title": "Cpf",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cpf"
+        ],
+        "title": "validar_cpf_toolArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "validar_cpf_toolOutput",
+        "type": "object"
+      }
+    },
+    "formatar_cpf_tool": {
+      "name": "formatar_cpf_tool",
+      "description": "\n        Formata um CPF brasileiro com m\u00e1scara.\n\n        Use quando precisar exibir um CPF de forma leg\u00edvel.\n        Entrada: '12345678901' \u2192 Sa\u00edda: '123.456.789-01'\n        ",
+      "inputSchema": {
+        "properties": {
+          "cpf": {
+            "title": "Cpf",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cpf"
+        ],
+        "title": "formatar_cpf_toolArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "formatar_cpf_toolOutput",
+        "type": "object"
+      }
+    },
+    "formatar_cnpj_tool": {
+      "name": "formatar_cnpj_tool",
+      "description": "\n        Formata um CNPJ brasileiro com m\u00e1scara.\n\n        Use quando precisar exibir um CNPJ de forma leg\u00edvel.\n        Entrada: '12345678000199' \u2192 Sa\u00edda: '12.345.678/0001-99'\n        ",
+      "inputSchema": {
+        "properties": {
+          "cnpj": {
+            "title": "Cnpj",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cnpj"
+        ],
+        "title": "formatar_cnpj_toolArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "formatar_cnpj_toolOutput",
+        "type": "object"
+      }
+    },
+    "buscar_endereco_por_cep": {
+      "name": "buscar_endereco_por_cep",
+      "description": "\n        Busca endere\u00e7o completo a partir de um CEP brasileiro.\n\n        Use quando precisar obter logradouro, bairro, cidade e estado de um CEP.\n        Aceita CEP com ou sem formata\u00e7\u00e3o (8 d\u00edgitos ou XXXXX-XXX).\n        Consulta a BrasilAPI em tempo real.\n        ",
+      "inputSchema": {
+        "properties": {
+          "cep": {
+            "title": "Cep",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cep"
+        ],
+        "title": "buscar_endereco_por_cepArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "buscar_endereco_por_cepOutput",
+        "type": "object"
+      }
+    },
+    "buscar_ceps_por_logradouro": {
+      "name": "buscar_ceps_por_logradouro",
+      "description": "\n        Busca CEPs por nome de logradouro e cidade.\n\n        Use quando o usu\u00e1rio sabe o nome da rua mas n\u00e3o o CEP.\n        Retorna uma lista de CEPs correspondentes.\n        Consulta a ViaCEP em tempo real.\n\n        Par\u00e2metros:\n        - logradouro: nome da rua (ex: \"Paulista\")\n        - cidade: nome da cidade (ex: \"S\u00e3o Paulo\")\n        - uf: sigla do estado opcional (ex: \"SP\") \u2014 melhora a precis\u00e3o da busca\n        ",
+      "inputSchema": {
+        "properties": {
+          "logradouro": {
+            "title": "Logradouro",
+            "type": "string"
+          },
+          "cidade": {
+            "title": "Cidade",
+            "type": "string"
+          },
+          "uf": {
+            "default": "",
+            "title": "Uf",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logradouro",
+          "cidade"
+        ],
+        "title": "buscar_ceps_por_logradouroArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "buscar_ceps_por_logradouroOutput",
+        "type": "object"
+      }
+    },
+    "formatar_endereco_completo": {
+      "name": "formatar_endereco_completo",
+      "description": "\n        Formata um endere\u00e7o brasileiro completo em string leg\u00edvel.\n\n        Use quando precisar exibir um endere\u00e7o de forma organizada.\n        Par\u00e2metros obrigat\u00f3rios: logradouro, cidade, uf.\n        ",
+      "inputSchema": {
+        "properties": {
+          "logradouro": {
+            "title": "Logradouro",
+            "type": "string"
+          },
+          "cidade": {
+            "title": "Cidade",
+            "type": "string"
+          },
+          "uf": {
+            "title": "Uf",
+            "type": "string"
+          },
+          "numero": {
+            "default": "",
+            "title": "Numero",
+            "type": "string"
+          },
+          "complemento": {
+            "default": "",
+            "title": "Complemento",
+            "type": "string"
+          },
+          "bairro": {
+            "default": "",
+            "title": "Bairro",
+            "type": "string"
+          },
+          "cep": {
+            "default": "",
+            "title": "Cep",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logradouro",
+          "cidade",
+          "uf"
+        ],
+        "title": "formatar_endereco_completoArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "formatar_endereco_completoOutput",
+        "type": "object"
+      }
+    },
+    "gerar_pix_copia_cola": {
+      "name": "gerar_pix_copia_cola",
+      "description": "\n        Gera um payload PIX Copia e Cola (est\u00e1tico) no padr\u00e3o EMV do Banco Central.\n\n        Use quando precisar gerar um c\u00f3digo PIX para o cliente copiar e colar no app do banco.\n        A chave pode ser CPF, CNPJ, email, telefone ou aleat\u00f3ria.\n        O valor \u00e9 obrigat\u00f3rio para PIX est\u00e1tico.\n        Retorna o payload EMV completo e o valor formatado.\n\n        Par\u00e2metros:\n        - chave: chave PIX (CPF, CNPJ, email, telefone ou aleat\u00f3ria)\n        - valor: valor em reais (m\u00e1x R$ 999.999.999)\n        - nome: nome do recebedor (m\u00e1x 25 caracteres)\n        - cidade: cidade do recebedor (m\u00e1x 15 caracteres)\n        - descricao: descri\u00e7\u00e3o opcional (m\u00e1x 25 caracteres)\n        ",
+      "inputSchema": {
+        "properties": {
+          "chave": {
+            "title": "Chave",
+            "type": "string"
+          },
+          "valor": {
+            "title": "Valor",
+            "type": "number"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "cidade": {
+            "title": "Cidade",
+            "type": "string"
+          },
+          "descricao": {
+            "default": "",
+            "title": "Descricao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chave",
+          "valor",
+          "nome",
+          "cidade"
+        ],
+        "title": "gerar_pix_copia_colaArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "gerar_pix_copia_colaOutput",
+        "type": "object"
+      }
+    },
+    "validar_chave_pix": {
+      "name": "validar_chave_pix",
+      "description": "\n        Valida o tipo e formato de uma chave PIX.\n\n        Use para verificar se uma chave PIX \u00e9 v\u00e1lida antes de usar.\n        Aceita CPF, CNPJ, email, telefone e chave aleat\u00f3ria (UUID).\n        Retorna o tipo identificado e se \u00e9 v\u00e1lida.\n        ",
+      "inputSchema": {
+        "properties": {
+          "chave": {
+            "title": "Chave",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chave"
+        ],
+        "title": "validar_chave_pixArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "validar_chave_pixOutput",
+        "type": "object"
+      }
+    },
+    "calcular_juros_simples": {
+      "name": "calcular_juros_simples",
+      "description": "\n        Calcula juros simples sobre um valor principal.\n\n        Use quando precisar calcular juros de parcelamentos, empr\u00e9stimos ou atrasos\n        usando a f\u00f3rmula: J = P \u00d7 i \u00d7 t.\n\n        Par\u00e2metros:\n        - principal: valor original em reais (m\u00e1x R$ 999.999.999)\n        - taxa_mensal: taxa de juros mensal em % (ex: 2.5 para 2,5%)\n        - meses: n\u00famero de meses (m\u00e1x 600)\n        ",
+      "inputSchema": {
+        "properties": {
+          "principal": {
+            "title": "Principal",
+            "type": "number"
+          },
+          "taxa_mensal": {
+            "title": "Taxa Mensal",
+            "type": "number"
+          },
+          "meses": {
+            "title": "Meses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal",
+          "taxa_mensal",
+          "meses"
+        ],
+        "title": "calcular_juros_simplesArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "calcular_juros_simplesOutput",
+        "type": "object"
+      }
+    },
+    "calcular_juros_compostos": {
+      "name": "calcular_juros_compostos",
+      "description": "\n        Calcula juros compostos sobre um valor principal.\n\n        Use quando precisar calcular juros de financiamentos, investimentos ou\n        parcelamentos com juros sobre juros. F\u00f3rmula: M = P \u00d7 (1 + i)^t.\n\n        Par\u00e2metros:\n        - principal: valor original em reais (m\u00e1x R$ 999.999.999)\n        - taxa_mensal: taxa de juros mensal em % (ex: 2.5 para 2,5%)\n        - meses: n\u00famero de meses (m\u00e1x 600)\n        ",
+      "inputSchema": {
+        "properties": {
+          "principal": {
+            "title": "Principal",
+            "type": "number"
+          },
+          "taxa_mensal": {
+            "title": "Taxa Mensal",
+            "type": "number"
+          },
+          "meses": {
+            "title": "Meses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal",
+          "taxa_mensal",
+          "meses"
+        ],
+        "title": "calcular_juros_compostosArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "calcular_juros_compostosOutput",
+        "type": "object"
+      }
+    },
+    "calcular_multa_atraso": {
+      "name": "calcular_multa_atraso",
+      "description": "\n        Calcula multa e juros de atraso no padr\u00e3o brasileiro.\n\n        Use quando precisar calcular o valor atualizado de uma conta ou boleto em atraso.\n        Padr\u00e3o: multa de 2% + juros de 1% ao m\u00eas proporcional aos dias de atraso.\n\n        Par\u00e2metros:\n        - valor: valor original em reais (m\u00e1x R$ 999.999.999)\n        - dias_atraso: n\u00famero de dias em atraso (m\u00e1x 3650)\n        ",
+      "inputSchema": {
+        "properties": {
+          "valor": {
+            "title": "Valor",
+            "type": "number"
+          },
+          "dias_atraso": {
+            "title": "Dias Atraso",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "valor",
+          "dias_atraso"
+        ],
+        "title": "calcular_multa_atrasoArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "calcular_multa_atrasoOutput",
+        "type": "object"
+      }
+    },
+    "listar_feriados_nacionais": {
+      "name": "listar_feriados_nacionais",
+      "description": "\n        Lista os feriados nacionais do Brasil para um determinado ano.\n\n        Use quando precisar saber os feriados oficiais brasileiros.\n        Consulta a BrasilAPI com cache de 24h.\n        Aceita anos entre 2000 e 2100.\n        ",
+      "inputSchema": {
+        "properties": {
+          "ano": {
+            "title": "Ano",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ano"
+        ],
+        "title": "listar_feriados_nacionaisArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "listar_feriados_nacionaisOutput",
+        "type": "object"
+      }
+    },
+    "verificar_dia_util": {
+      "name": "verificar_dia_util",
+      "description": "\n        Verifica se uma data \u00e9 dia \u00fatil no Brasil.\n\n        Considera fins de semana e feriados nacionais.\n        Aceita formato YYYY-MM-DD ou DD/MM/YYYY.\n        ",
+      "inputSchema": {
+        "properties": {
+          "data": {
+            "title": "Data",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "verificar_dia_utilArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "verificar_dia_utilOutput",
+        "type": "object"
+      }
+    },
+    "calcular_prazo_util": {
+      "name": "calcular_prazo_util",
+      "description": "\n        Calcula a data final somando N dias \u00fateis a uma data inicial.\n\n        Use para calcular prazos banc\u00e1rios, vencimentos ou SLAs.\n        Considera feriados nacionais e fins de semana.\n        Aceita formato YYYY-MM-DD ou DD/MM/YYYY.\n        M\u00e1ximo: 3650 dias \u00fateis (10 anos).\n        ",
+      "inputSchema": {
+        "properties": {
+          "data_inicio": {
+            "title": "Data Inicio",
+            "type": "string"
+          },
+          "dias_uteis": {
+            "title": "Dias Uteis",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data_inicio",
+          "dias_uteis"
+        ],
+        "title": "calcular_prazo_utilArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "calcular_prazo_utilOutput",
+        "type": "object"
+      }
+    },
+    "proximo_dia_util": {
+      "name": "proximo_dia_util",
+      "description": "\n        Retorna o pr\u00f3ximo dia \u00fatil a partir de uma data.\n\n        Se a data for dia \u00fatil, retorna o dia \u00fatil seguinte.\n        Considera feriados nacionais e fins de semana.\n        Aceita formato YYYY-MM-DD ou DD/MM/YYYY.\n        ",
+      "inputSchema": {
+        "properties": {
+          "data": {
+            "title": "Data",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "proximo_dia_utilArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "proximo_dia_utilOutput",
+        "type": "object"
+      }
+    },
+    "converter_moeda": {
+      "name": "converter_moeda",
+      "description": "\n        Converte um valor entre moedas usando cota\u00e7\u00e3o em tempo real.\n\n        Use quando precisar converter BRL para outra moeda ou entre moedas estrangeiras.\n        Consulta o ExchangeRate-API com cache de 5 minutos.\n        Exemplos: converter_moeda(100, \"BRL\", \"USD\"), converter_moeda(50, \"USD\", \"BRL\")\n\n        Par\u00e2metros:\n        - valor: valor a converter (m\u00e1x R$ 999.999.999)\n        - de: moeda de origem (ex: \"BRL\", \"USD\", \"EUR\")\n        - para: moeda de destino (ex: \"USD\", \"BRL\", \"EUR\")\n        ",
+      "inputSchema": {
+        "properties": {
+          "valor": {
+            "title": "Valor",
+            "type": "number"
+          },
+          "de": {
+            "title": "De",
+            "type": "string"
+          },
+          "para": {
+            "title": "Para",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valor",
+          "de",
+          "para"
+        ],
+        "title": "converter_moedaArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "converter_moedaOutput",
+        "type": "object"
+      }
+    },
+    "validar_telefone_br": {
+      "name": "validar_telefone_br",
+      "description": "\n        Valida se um telefone \u00e9 um n\u00famero brasileiro v\u00e1lido.\n\n        Aceita formatos com ou sem DDD, com ou sem formata\u00e7\u00e3o.\n        Valida: DDD (11-99), tamanho (10 fixo, 11 celular) e d\u00edgito inicial do celular (9).\n        ",
+      "inputSchema": {
+        "properties": {
+          "telefone": {
+            "title": "Telefone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "telefone"
+        ],
+        "title": "validar_telefone_brArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "validar_telefone_brOutput",
+        "type": "object"
+      }
+    },
+    "formatar_telefone_br_tool": {
+      "name": "formatar_telefone_br_tool",
+      "description": "\n        Formata um telefone brasileiro com m\u00e1scara e DDD.\n\n        Celular (11 d\u00edgitos): (XX) XXXXX-XXXX\n        Fixo (10 d\u00edgitos): (XX) XXXX-XXXX\n        ",
+      "inputSchema": {
+        "properties": {
+          "telefone": {
+            "title": "Telefone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "telefone"
+        ],
+        "title": "formatar_telefone_br_toolArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "formatar_telefone_br_toolOutput",
+        "type": "object"
+      }
+    },
+    "buscar_banco_por_codigo": {
+      "name": "buscar_banco_por_codigo",
+      "description": "\n        Busca dados de um banco brasileiro pelo c\u00f3digo COMPE.\n\n        Use quando precisar identificar um banco pelo c\u00f3digo (ex: 001 = Banco do Brasil,\n        341 = Ita\u00fa, 237 = Bradesco). Consulta a BrasilAPI com cache de 1h.\n        ",
+      "inputSchema": {
+        "properties": {
+          "codigo": {
+            "title": "Codigo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "codigo"
+        ],
+        "title": "buscar_banco_por_codigoArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "buscar_banco_por_codigoOutput",
+        "type": "object"
+      }
+    },
+    "listar_ddd_estados": {
+      "name": "listar_ddd_estados",
+      "description": "\n        Retorna o mapa completo de DDDs para estados brasileiros.\n\n        Use quando precisar identificar a regi\u00e3o de um DDD ou listar todos os DDDs.\n        Retorna todos os 67 DDDs do Brasil organizados por estado.\n        ",
+      "inputSchema": {
+        "properties": {},
+        "title": "listar_ddd_estadosArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "listar_ddd_estadosOutput",
+        "type": "object"
+      }
+    }
+  },
+  "issues": [
+    "consultar_cnpj.cnpj: missing description",
+    "validar_cnpj_tool.cnpj: missing description",
+    "validar_cpf_tool.cpf: missing description",
+    "formatar_cpf_tool.cpf: missing description",
+    "formatar_cnpj_tool.cnpj: missing description",
+    "buscar_endereco_por_cep.cep: missing description",
+    "buscar_ceps_por_logradouro.logradouro: missing description",
+    "buscar_ceps_por_logradouro.cidade: missing description",
+    "buscar_ceps_por_logradouro.uf: missing description",
+    "formatar_endereco_completo.logradouro: missing description",
+    "formatar_endereco_completo.cidade: missing description",
+    "formatar_endereco_completo.uf: missing description",
+    "formatar_endereco_completo.numero: missing description",
+    "formatar_endereco_completo.complemento: missing description",
+    "formatar_endereco_completo.bairro: missing description",
+    "formatar_endereco_completo.cep: missing description",
+    "gerar_pix_copia_cola.chave: missing description",
+    "gerar_pix_copia_cola.valor: missing description",
+    "gerar_pix_copia_cola.nome: missing description",
+    "gerar_pix_copia_cola.cidade: missing description",
+    "gerar_pix_copia_cola.descricao: missing description",
+    "validar_chave_pix.chave: missing description",
+    "calcular_juros_simples.principal: missing description",
+    "calcular_juros_simples.taxa_mensal: missing description",
+    "calcular_juros_simples.meses: missing description",
+    "calcular_juros_compostos.principal: missing description",
+    "calcular_juros_compostos.taxa_mensal: missing description",
+    "calcular_juros_compostos.meses: missing description",
+    "calcular_multa_atraso.valor: missing description",
+    "calcular_multa_atraso.dias_atraso: missing description",
+    "listar_feriados_nacionais.ano: missing description",
+    "verificar_dia_util.data: missing description",
+    "calcular_prazo_util.data_inicio: missing description",
+    "calcular_prazo_util.dias_uteis: missing description",
+    "proximo_dia_util.data: missing description",
+    "converter_moeda.valor: missing description",
+    "converter_moeda.de: missing description",
+    "converter_moeda.para: missing description",
+    "validar_telefone_br.telefone: missing description",
+    "formatar_telefone_br_tool.telefone: missing description",
+    "buscar_banco_por_codigo.codigo: missing description"
+  ],
+  "valid": false
+}

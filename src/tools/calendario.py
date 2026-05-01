@@ -2,6 +2,9 @@
 
 import sys
 from datetime import date, datetime, timedelta
+from typing import Annotated
+
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils import http_client
@@ -77,7 +80,7 @@ def register_tools(mcp: FastMCP) -> None:
     """Registra as ferramentas de calendário no servidor MCP."""
 
     @mcp.tool()
-    async def listar_feriados_nacionais(ano: int) -> str:
+    async def listar_feriados_nacionais(ano: Annotated[int, Field(description="Ano para consultar feriados (ex: 2026)")]) -> str:
         """
         Lista os feriados nacionais do Brasil para um determinado ano.
 
@@ -129,7 +132,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def verificar_dia_util(data: str) -> str:
+    async def verificar_dia_util(data: Annotated[str, Field(description="Data no formato YYYY-MM-DD ou DD/MM/YYYY (ex: 2026-04-15)")]) -> str:
         """
         Verifica se uma data é dia útil no Brasil.
 
@@ -155,7 +158,7 @@ def register_tools(mcp: FastMCP) -> None:
             return f"✅ {data_fmt} NÃO é dia útil (feriado)."
 
     @mcp.tool()
-    async def calcular_prazo_util(data_inicio: str, dias_uteis: int) -> str:
+    async def calcular_prazo_util(data_inicio: Annotated[str, Field(description="Data inicial no formato YYYY-MM-DD ou DD/MM/YYYY")], dias_uteis: Annotated[int, Field(description="Número de dias úteis a somar (máx 3650)")]) -> str:
         """
         Calcula a data final somando N dias úteis a uma data inicial.
 
@@ -207,7 +210,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def proximo_dia_util(data: str) -> str:
+    async def proximo_dia_util(data: Annotated[str, Field(description="Data no formato YYYY-MM-DD ou DD/MM/YYYY")]) -> str:
         """
         Retorna o próximo dia útil a partir de uma data.
 

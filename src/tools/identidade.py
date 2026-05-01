@@ -1,6 +1,9 @@
 """Módulo de identidade — CNPJ, CPF, validações."""
 
 import sys
+from typing import Annotated
+
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj
@@ -18,7 +21,7 @@ def register_tools(mcp: FastMCP) -> None:
     """Registra as ferramentas de identidade no servidor MCP."""
 
     @mcp.tool()
-    async def consultar_cnpj(cnpj: str) -> str:
+    async def consultar_cnpj(cnpj: Annotated[str, Field(description="CNPJ da empresa (com ou sem formatação, ex: 11.222.333/0001-81 ou 11222333000181)")]) -> str:
         """
         Consulta dados cadastrais completos de uma empresa brasileira pelo CNPJ.
 
@@ -109,7 +112,7 @@ def register_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool()
-    async def validar_cnpj_tool(cnpj: str) -> str:
+    async def validar_cnpj_tool(cnpj: Annotated[str, Field(description="CNPJ para validar (com ou sem formatação)")]) -> str:
         """
         Valida matematicamente um CNPJ brasileiro.
 
@@ -129,7 +132,7 @@ def register_tools(mcp: FastMCP) -> None:
             )
 
     @mcp.tool()
-    async def validar_cpf_tool(cpf: str) -> str:
+    async def validar_cpf_tool(cpf: Annotated[str, Field(description="CPF para validar (com ou sem formatação, ex: 529.982.247-25 ou 52998224725)")]) -> str:
         """
         Valida matematicamente um CPF brasileiro.
 
@@ -149,7 +152,7 @@ def register_tools(mcp: FastMCP) -> None:
             )
 
     @mcp.tool()
-    async def formatar_cpf_tool(cpf: str) -> str:
+    async def formatar_cpf_tool(cpf: Annotated[str, Field(description="CPF para formatar (apenas dígitos ou já formatado)")]) -> str:
         """
         Formata um CPF brasileiro com máscara.
 
@@ -170,7 +173,7 @@ def register_tools(mcp: FastMCP) -> None:
         return f"✅ CPF formatado: {cpf_formatado} — {valido}"
 
     @mcp.tool()
-    async def formatar_cnpj_tool(cnpj: str) -> str:
+    async def formatar_cnpj_tool(cnpj: Annotated[str, Field(description="CNPJ para formatar (apenas dígitos ou já formatado)")]) -> str:
         """
         Formata um CNPJ brasileiro com máscara.
 
