@@ -878,20 +878,24 @@ const Playground = ({ status }) => {
       const res=await fetch(MCP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream'},body:JSON.stringify(rpcRequest)});
       const dur=Math.round(performance.now()-t0);
       const ct=res.headers.get('content-type')||'';
-      let displayPayload;
+      let rpc;
       if(ct.indexOf('application/json')!==-1||ct.indexOf('text/json')!==-1){
-        const rpc=await res.json();
-        if(rpc.error){ setResult({phase:'error',durationMs:dur,error:rpc.error.message||JSON.stringify(rpc.error)}); return; }
-        const rpcResult=rpc.result||rpc;
-        if(rpcResult.content&&Array.isArray(rpcResult.content)){
-          const ti=rpcResult.content.find((c)=>c.type==='text');
-          if(ti){ try{displayPayload=JSON.parse(ti.text);}catch(_){displayPayload={content:rpcResult.content};} }
-          else displayPayload=rpcResult;
-        } else displayPayload=rpcResult;
+        rpc=await res.json();
       } else {
         const raw=await res.text();
-        try{displayPayload=JSON.parse(raw);}catch(_){displayPayload={raw:raw};}
+        const dataLine=raw.split('\n').find((l)=>l.startsWith('data: '));
+        try{rpc=JSON.parse(dataLine?dataLine.slice(6):raw);}catch(_){rpc={result:{content:[{type:'text',text:raw}]}};}
       }
+      if(rpc.error){ setResult({phase:'error',durationMs:dur,error:rpc.error.message||JSON.stringify(rpc.error)}); return; }
+      const rpcResult=rpc.result||rpc;
+      let displayPayload;
+      if(rpcResult.content&&Array.isArray(rpcResult.content)){
+        const ti=rpcResult.content.find((c)=>c.type==='text');
+        if(ti){
+          try{const parsed=JSON.parse(ti.text);displayPayload=parsed.result||parsed;}
+          catch(_){displayPayload=ti.text;}
+        } else displayPayload=rpcResult;
+      } else displayPayload=rpcResult;
       if(!res.ok) setResult({phase:'error',durationMs:dur,error:'HTTP '+res.status+' '+res.statusText});
       else setResult({phase:'success',durationMs:dur,payload:displayPayload});
     } catch(e){
