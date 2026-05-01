@@ -2,8 +2,9 @@
 
 import sys
 import asyncio
+from pathlib import Path
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse
 from mcp.server.fastmcp import FastMCP
 
 from src.config import MCP_PORT, MCP_ENV
@@ -28,6 +29,15 @@ utilidades.register_tools(mcp)
 async def health(request: Request) -> JSONResponse:
     """Health check endpoint para o Railway."""
     return JSONResponse({"status": "ok", "version": "0.1.0"})
+
+
+_LANDING_HTML = Path(__file__).parent / "landing" / "index.html"
+
+
+@mcp.custom_route("/", methods=["GET"])
+async def landing(request: Request) -> HTMLResponse:
+    """Serve a landing page do Brazil MCP Playground."""
+    return HTMLResponse(_LANDING_HTML.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
