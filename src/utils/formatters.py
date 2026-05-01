@@ -1,6 +1,12 @@
-"""Formatação de dados brasileiros — CPF, CNPJ, CEP, telefone."""
+"""Formatação de dados brasileiros — CPF, CNPJ, CEP, telefone, moeda."""
 
 from src.utils.validators import limpar_numeros
+
+
+def formatar_brl(valor: float) -> str:
+    """Formata valor em reais: 1800.5 → '1.800,50'."""
+    s = f"{valor:,.2f}"
+    return s.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
 
 
 def formatar_cpf(cpf: str) -> str:

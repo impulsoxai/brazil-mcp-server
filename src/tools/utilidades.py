@@ -7,7 +7,7 @@ from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros
-from src.utils.formatters import formatar_telefone_br
+from src.utils.formatters import formatar_telefone_br, formatar_brl
 from src.utils import http_client
 from src.utils.cache import get_cached, set_cached, TTL_MOEDA, TTL_BANCO, TTL_DDD
 from src.config import BRASIL_API_BASE, EXCHANGE_RATE_API_BASE
@@ -75,12 +75,12 @@ def register_tools(mcp: FastMCP) -> None:
 
         if valor > 999_999_999:
             return (
-                f"❌ Valor excede o limite: R$ {valor:,.2f} (máx R$ 999.999.999).\n"
+                f"❌ Valor excede o limite: R$ {formatar_brl(valor)} (máx R$ 999.999.999).\n"
                 "Dica: use um valor menor."
             )
 
         if de == para:
-            return f"✅ Conversão: {de} = {para}.\nValor: {valor:.2f} (mesma moeda, sem conversão)."
+            return f"✅ Conversão: {de} = {para}.\nValor: {formatar_brl(valor)} (mesma moeda, sem conversão)."
 
         cache_key = f"cotacao:{de}:{para}"
         cached = get_cached(cache_key)
@@ -116,9 +116,9 @@ def register_tools(mcp: FastMCP) -> None:
 
         return (
             f"✅ Conversão realizada:\n"
-            f"Valor original: {valor:,.2f} {de}\n"
+            f"Valor original: {formatar_brl(valor)} {de}\n"
             f"Cotação: 1 {de} = {taxa:,.4f} {para}\n"
-            f"Valor convertido: {convertido:,.2f} {para}"
+            f"Valor convertido: {formatar_brl(convertido)} {para}"
         )
 
     @mcp.tool()

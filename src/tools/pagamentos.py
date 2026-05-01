@@ -8,6 +8,7 @@ from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
 from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj
+from src.utils.formatters import formatar_brl
 
 
 # Limites razoáveis
@@ -92,7 +93,7 @@ def register_tools(mcp: FastMCP) -> None:
 
         if valor > _VALOR_MAXIMO:
             return (
-                f"❌ Valor excede o limite: R$ {valor:,.2f} (máx R$ 999.999.999).\n"
+                f"❌ Valor excede o limite: R$ {formatar_brl(valor)} (máx R$ 999.999.999).\n"
                 "Dica: use um valor menor."
             )
 
@@ -200,7 +201,7 @@ def register_tools(mcp: FastMCP) -> None:
         if principal <= 0:
             return "❌ O valor principal deve ser maior que zero."
         if principal > _VALOR_MAXIMO:
-            return f"❌ Valor excede o limite: R$ {principal:,.2f} (máx R$ 999.999.999)."
+            return f"❌ Valor excede o limite: R$ {formatar_brl(principal)} (máx R$ 999.999.999)."
         if taxa_mensal < 0:
             return "❌ A taxa de juros não pode ser negativa."
         if taxa_mensal > 100:
@@ -216,11 +217,11 @@ def register_tools(mcp: FastMCP) -> None:
 
         return (
             f"✅ Juros Simples calculados:\n"
-            f"Valor principal: R$ {principal:,.2f}\n"
+            f"Valor principal: R$ {formatar_brl(principal)}\n"
             f"Taxa mensal: {taxa_mensal}%\n"
             f"Período: {meses} mês(es)\n"
-            f"Juros: R$ {juros:,.2f}\n"
-            f"Total a pagar: R$ {total:,.2f}"
+            f"Juros: R$ {formatar_brl(juros)}\n"
+            f"Total a pagar: R$ {formatar_brl(total)}"
         )
 
     @mcp.tool()
@@ -243,7 +244,7 @@ def register_tools(mcp: FastMCP) -> None:
         if principal <= 0:
             return "❌ O valor principal deve ser maior que zero."
         if principal > _VALOR_MAXIMO:
-            return f"❌ Valor excede o limite: R$ {principal:,.2f} (máx R$ 999.999.999)."
+            return f"❌ Valor excede o limite: R$ {formatar_brl(principal)} (máx R$ 999.999.999)."
         if taxa_mensal < 0:
             return "❌ A taxa de juros não pode ser negativa."
         if taxa_mensal > 100:
@@ -259,11 +260,11 @@ def register_tools(mcp: FastMCP) -> None:
 
         return (
             f"✅ Juros Compostos calculados:\n"
-            f"Valor principal: R$ {principal:,.2f}\n"
+            f"Valor principal: R$ {formatar_brl(principal)}\n"
             f"Taxa mensal: {taxa_mensal}%\n"
             f"Período: {meses} mês(es)\n"
-            f"Juros: R$ {juros:,.2f}\n"
-            f"Montante total: R$ {montante:,.2f}"
+            f"Juros: R$ {formatar_brl(juros)}\n"
+            f"Montante total: R$ {formatar_brl(montante)}"
         )
 
     @mcp.tool()
@@ -284,7 +285,7 @@ def register_tools(mcp: FastMCP) -> None:
         if valor <= 0:
             return "❌ O valor deve ser maior que zero."
         if valor > _VALOR_MAXIMO:
-            return f"❌ Valor excede o limite: R$ {valor:,.2f} (máx R$ 999.999.999)."
+            return f"❌ Valor excede o limite: R$ {formatar_brl(valor)} (máx R$ 999.999.999)."
         if dias_atraso < 0:
             return "❌ Os dias de atraso não podem ser negativos."
         if dias_atraso > _DIAS_ATRASO_MAXIMO:
@@ -292,7 +293,7 @@ def register_tools(mcp: FastMCP) -> None:
 
         if dias_atraso == 0:
             return (
-                f"✅ Sem atraso — valor original: R$ {valor:,.2f}"
+                f"✅ Sem atraso — valor original: R$ {formatar_brl(valor)}"
             )
 
         multa = valor * 0.02
@@ -302,11 +303,11 @@ def register_tools(mcp: FastMCP) -> None:
 
         return (
             f"✅ Cálculo de atraso:\n"
-            f"Valor original: R$ {valor:,.2f}\n"
+            f"Valor original: R$ {formatar_brl(valor)}\n"
             f"Dias em atraso: {dias_atraso}\n"
-            f"Multa (2%): R$ {multa:,.2f}\n"
-            f"Juros (1%/mês pro rata): R$ {juros:,.2f}\n"
-            f"Total atualizado: R$ {total:,.2f}"
+            f"Multa (2%): R$ {formatar_brl(multa)}\n"
+            f"Juros (1%/mês pro rata): R$ {formatar_brl(juros)}\n"
+            f"Total atualizado: R$ {formatar_brl(total)}"
         )
 
 
