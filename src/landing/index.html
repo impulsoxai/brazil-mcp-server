@@ -877,9 +877,10 @@ const Playground = ({ status }) => {
     try {
       const res=await fetch(MCP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream'},body:JSON.stringify(rpcRequest)});
       const dur=Math.round(performance.now()-t0);
+      if(!res.ok){ setResult({phase:'error',durationMs:dur,error:'HTTP '+res.status+' '+res.statusText}); return; }
       const ct=res.headers.get('content-type')||'';
       let rpc;
-      if(ct.indexOf('application/json')!==-1||ct.indexOf('text/json')!==-1){
+      if(ct.includes('application/json')||ct.includes('text/json')){
         rpc=await res.json();
       } else {
         const raw=await res.text();
@@ -896,8 +897,7 @@ const Playground = ({ status }) => {
           catch(_){displayPayload=ti.text;}
         } else displayPayload=rpcResult;
       } else displayPayload=rpcResult;
-      if(!res.ok) setResult({phase:'error',durationMs:dur,error:'HTTP '+res.status+' '+res.statusText});
-      else setResult({phase:'success',durationMs:dur,payload:displayPayload});
+      setResult({phase:'success',durationMs:dur,payload:displayPayload});
     } catch(e){
       const dur=Math.round(performance.now()-t0);
       setResult({phase:'error',durationMs:dur,error:e.name+': '+e.message});
