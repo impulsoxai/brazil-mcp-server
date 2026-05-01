@@ -713,10 +713,11 @@ const initialValues = (tool) => {
 
 const isEmpty = (v) => v === '' || v === undefined || v === null;
 
-const _fmtBR = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 20 });
+const _fmtBR = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const formatarBR = (texto) => {
-  const n = Number(texto);
-  return isNaN(n) ? texto : _fmtBR.format(n);
+  return texto.replace(/\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?!\d)/g, (match) => {
+    return _fmtBR.format(Number(match.replace(/,/g, '')));
+  });
 };
 
 const highlightJSON = (obj) => {
