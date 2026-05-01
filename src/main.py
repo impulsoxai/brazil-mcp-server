@@ -32,13 +32,13 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "version": "0.1.0"})
 
 
-_LANDING_HTML = Path(__file__).parent / "landing" / "index.html"
+_LANDING_HTML = (Path(__file__).parent / "landing" / "index.html").read_text(encoding="utf-8")
 
 
 @mcp.custom_route("/", methods=["GET"])
 async def landing(request: Request) -> HTMLResponse:
     """Serve a landing page do Brazil MCP Playground."""
-    return HTMLResponse(_LANDING_HTML.read_text(encoding="utf-8"))
+    return HTMLResponse(_LANDING_HTML)
 
 
 if __name__ == "__main__":
