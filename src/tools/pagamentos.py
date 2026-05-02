@@ -103,11 +103,11 @@ def register_tools(mcp: FastMCP) -> None:
         descricao = sanitizar_input(descricao, 25)
 
         payload = "0014br.gov.bcb.pix"
-        chave_tag = f"01{len(chave):02d}{chave}"
+        chave_tag = f"01{len(chave.encode('utf-8')):02d}{chave}"
         payload += chave_tag
 
         if descricao:
-            desc_tag = f"02{len(descricao):02d}{descricao}"
+            desc_tag = f"02{len(descricao.encode('utf-8')):02d}{descricao}"
             payload += desc_tag
 
         valor_str = _formatar_valor_brl(valor)
@@ -115,7 +115,7 @@ def register_tools(mcp: FastMCP) -> None:
         cidade_tag = f"60{len(cidade.encode('utf-8')):02d}{cidade}"
 
         payload_format = "000201"
-        merchant_account = f"26{len(payload):02d}{payload}"
+        merchant_account = f"26{len(payload.encode('utf-8')):02d}{payload}"
         merchant_category = "52040000"
         transaction_currency = "5303986"
         tx_amount = f"54{len(valor_str):02d}{valor_str}"
@@ -309,8 +309,8 @@ def register_tools(mcp: FastMCP) -> None:
 def _calcular_crc16(payload: str) -> str:
     """Calcula CRC16-CCITT (polinômio 0x1021) para payload PIX EMV."""
     crc = 0xFFFF
-    for char in payload:
-        crc ^= ord(char) << 8
+    for byte in payload.encode('utf-8'):
+        crc ^= byte << 8
         for _ in range(8):
             if crc & 0x8000:
                 crc = (crc << 1) ^ 0x1021

@@ -1,5 +1,11 @@
 # 🇧🇷 Brazil MCP Server
 
+![version](https://img.shields.io/badge/version-0.1.0-blue)
+![tools](https://img.shields.io/badge/tools-22-green)
+![tests](https://img.shields.io/badge/tests-22%2F22-brightgreen)
+![license](https://img.shields.io/badge/license-MIT-brightgreen)
+![python](https://img.shields.io/badge/python-3.11+-3776AB)
+
 **English** | [Português](#português)
 
 MCP Server with 22 native Brazilian tools for AI agents. Connect any MCP-compatible agent to Brazilian data sources — CNPJ, CPF, CEP, PIX, currency, holidays, and more.
@@ -69,6 +75,45 @@ That's it. Your agent now has access to all 22 Brazilian tools.
 | `formatar_telefone_br_tool` | Format Brazilian phone with mask ((11) 99999-8888) |
 | `buscar_banco_por_codigo` | Look up Brazilian bank by COMPE code via BrasilAPI |
 | `listar_ddd_estados` | Complete DDD-to-state mapping (67 DDDs) |
+
+---
+
+## Usage Examples
+
+### Validate a CPF
+```json
+{"name": "validar_cpf_tool", "arguments": {"cpf": "529.982.247-25"}}
+```
+Response: `✅ CPF 529.982.247-25 é válido.`
+
+### Look up an address by CEP
+```json
+{"name": "buscar_endereco_por_cep", "arguments": {"cep": "01310-100"}}
+```
+Response: `✅ Endereço encontrado: Avenida Paulista, 1578 — Bela Vista, São Paulo/SP`
+
+### Generate a PIX QR code
+```json
+{"name": "gerar_pix_copia_cola", "arguments": {
+  "chave": "11222333000181",
+  "valor": 150.00,
+  "nome": "Empresa LTDA",
+  "cidade": "Sao Paulo"
+}}
+```
+Response: `✅ PIX Copia e Cola gerado: 00020126580014br.gov.bcb.pix...`
+
+### Check if a date is a business day
+```json
+{"name": "verificar_dia_util", "arguments": {"data": "2026-01-01"}}
+```
+Response: `❌ 01/01/2026 não é dia útil (Confraternização Universal).`
+
+### Convert currency
+```json
+{"name": "converter_moeda", "arguments": {"valor": 100, "de": "BRL", "para": "USD"}}
+```
+Response: `✅ R$ 100.00 = USD 19.52 (taxa: 0.1952)`
 
 ---
 
@@ -143,6 +188,10 @@ MIT — free to use, modify, and distribute.
 ---
 
 ## Português
+
+![version](https://img.shields.io/badge/versão-0.1.0-blue)
+![tools](https://img.shields.io/badge/ferramentas-22-green)
+![tests](https://img.shields.io/badge/testes-22%2F22-brightgreen)
 
 Servidor MCP com 22 ferramentas brasileiras nativas para agentes de IA. Conecte qualquer agente compatível com MCP a dados brasileiros — CNPJ, CPF, CEP, PIX, moedas, feriados e muito mais.
 

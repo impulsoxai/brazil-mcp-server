@@ -133,8 +133,8 @@ def validar_emv_campos(payload):
 def crc16_ccitt(payload):
     """Calcula CRC16-CCITT (polynomial 0x1021) para validação de referência."""
     crc = 0xFFFF
-    for char in payload:
-        crc ^= ord(char) << 8
+    for byte in payload.encode('utf-8'):
+        crc ^= byte << 8
         for _ in range(8):
             if crc & 0x8000:
                 crc = (crc << 1) ^ 0x1021
