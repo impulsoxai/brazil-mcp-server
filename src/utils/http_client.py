@@ -1,5 +1,6 @@
 """Cliente HTTP compartilhado com retry, backoff exponencial e timeout."""
 
+import asyncio
 import sys
 import httpx
 
@@ -39,7 +40,6 @@ async def get(url: str, **kwargs) -> httpx.Response:
                             f"aguardando {wait:.0f}s",
                             file=sys.stderr,
                         )
-                        import asyncio
                         await asyncio.sleep(wait)
                         continue
 
@@ -56,7 +56,6 @@ async def get(url: str, **kwargs) -> httpx.Response:
                     f"aguardando {wait:.0f}s",
                     file=sys.stderr,
                 )
-                import asyncio
                 await asyncio.sleep(wait)
             else:
                 print(

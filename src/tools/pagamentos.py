@@ -7,7 +7,7 @@ from typing import Annotated
 from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
-from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj
+from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj, sanitizar_input
 from src.utils.formatters import formatar_brl
 
 
@@ -17,14 +17,9 @@ _MESES_MAXIMO = 600  # 50 anos
 _DIAS_ATRASO_MAXIMO = 3650  # 10 anos
 
 
-def _sanitizar_input(valor: str, max_len: int = 500) -> str:
-    """Trunca e remove caracteres de controle de uma string."""
-    return valor[:max_len].strip()
-
-
 def _identificar_tipo_chave(chave: str) -> str | None:
     """Identifica o tipo de chave PIX. Retorna None se inválida."""
-    chave = _sanitizar_input(chave, 200)
+    chave = sanitizar_input(chave, 200)
 
     if re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', chave, re.IGNORECASE):
         return "aleatoria"
@@ -97,15 +92,15 @@ def register_tools(mcp: FastMCP) -> None:
                 "Dica: use um valor menor."
             )
 
-        nome = _sanitizar_input(nome, 25)
+        nome = sanitizar_input(nome, 25)
         if not nome:
             return "❌ Nome do recebedor é obrigatório."
 
-        cidade = _sanitizar_input(cidade, 15)
+        cidade = sanitizar_input(cidade, 15)
         if not cidade:
             return "❌ Cidade do recebedor é obrigatória."
 
-        descricao = _sanitizar_input(descricao, 25)
+        descricao = sanitizar_input(descricao, 25)
 
         payload = "0014br.gov.bcb.pix"
         chave_tag = f"01{len(chave):02d}{chave}"

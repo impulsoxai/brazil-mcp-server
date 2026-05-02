@@ -6,15 +6,10 @@ from typing import Annotated
 from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
-from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj
-from src.utils.formatters import formatar_cpf, formatar_cnpj
+from src.utils.validators import limpar_numeros, validar_cpf, validar_cnpj, sanitizar_input
+from src.utils.formatters import formatar_cpf, formatar_cnpj, formatar_cep
 from src.utils import http_client
 from src.config import BRASIL_API_BASE
-
-
-def _sanitizar_input(valor: str, max_len: int = 500) -> str:
-    """Trunca e remove caracteres de controle de uma string."""
-    return valor[:max_len].strip()
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -32,7 +27,7 @@ def register_tools(mcp: FastMCP) -> None:
         O CNPJ pode ser enviado com ou sem formatação (14 dígitos ou XX.XXX.XXX/XXXX-XX).
         Retorna erro descritivo se o CNPJ for inválido ou a empresa não for encontrada.
         """
-        cnpj = _sanitizar_input(cnpj)
+        cnpj = sanitizar_input(cnpj)
         cnpj_limpo = limpar_numeros(cnpj)
 
         if not validar_cnpj(cnpj_limpo):
@@ -82,7 +77,7 @@ def register_tools(mcp: FastMCP) -> None:
         if municipio and uf:
             endereco_parts.append(f"{municipio}/{uf}")
         if cep:
-            endereco_parts.append(formatar_cnpj(cep) if len(limpar_numeros(cep)) == 14 else cep)
+            endereco_parts.append(formatar_cep(cep) if len(limpar_numeros(cep)) == 8 else cep)
         endereco = " — ".join(endereco_parts) if endereco_parts else "Não informado"
 
         cnae = f"{cnae_cod} — {cnae_desc}" if cnae_cod else cnae_desc
@@ -119,7 +114,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use para verificar se um CNPJ é válido sem consultar a base de dados.
         Aceita com ou sem formatação. Retorna se é válido e o CNPJ formatado.
         """
-        cnpj = _sanitizar_input(cnpj)
+        cnpj = sanitizar_input(cnpj)
         cnpj_limpo = limpar_numeros(cnpj)
         cnpj_formatado = formatar_cnpj(cnpj_limpo)
 
@@ -139,7 +134,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use para verificar se um CPF é válido sem consultar a base de dados.
         Aceita com ou sem formatação. Retorna se é válido e o CPF formatado.
         """
-        cpf = _sanitizar_input(cpf)
+        cpf = sanitizar_input(cpf)
         cpf_limpo = limpar_numeros(cpf)
         cpf_formatado = formatar_cpf(cpf_limpo)
 
@@ -159,7 +154,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando precisar exibir um CPF de forma legível.
         Entrada: '12345678901' → Saída: '123.456.789-01'
         """
-        cpf = _sanitizar_input(cpf)
+        cpf = sanitizar_input(cpf)
         cpf_limpo = limpar_numeros(cpf)
 
         if len(cpf_limpo) != 11:
@@ -180,7 +175,7 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando precisar exibir um CNPJ de forma legível.
         Entrada: '12345678000199' → Saída: '12.345.678/0001-99'
         """
-        cnpj = _sanitizar_input(cnpj)
+        cnpj = sanitizar_input(cnpj)
         cnpj_limpo = limpar_numeros(cnpj)
 
         if len(cnpj_limpo) != 14:

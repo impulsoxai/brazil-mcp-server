@@ -1,6 +1,11 @@
 """Validação matemática de CPF e CNPJ — sem chamada de API."""
 
 
+def sanitizar_input(valor: str, max_len: int = 500) -> str:
+    """Trunca e remove caracteres de controle de uma string."""
+    return valor[:max_len].strip()
+
+
 def limpar_numeros(valor: str) -> str:
     """Remove tudo que não for dígito."""
     return ''.join(filter(str.isdigit, valor))
