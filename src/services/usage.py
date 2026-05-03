@@ -13,6 +13,14 @@ from src.services.plans import PLANS, DEFAULT_PLAN, get_plan
 
 # Storage path
 _KEYS_FILE = Path(__file__).parent.parent.parent / "data" / "api_keys.json"
+_IP_KEYS_FILE = Path(__file__).parent.parent.parent / "data" / "ip_keys.json"
+
+# IP fingerprint tracking: {ip: {"keys": [api_key, ...], "timestamps": [iso, ...]}}
+_ip_keys: dict[str, dict] = {}
+
+# Max keys per IP per 24 hours
+_IP_KEY_LIMIT = 3
+_IP_WINDOW_HOURS = 24
 
 # In-memory cache (loaded from JSON)
 _keys: dict[str, dict] = {}
@@ -45,18 +53,36 @@ def _save_keys() -> None:
     _KEYS_FILE.write_text(json.dumps(_keys, ensure_ascii=False), encoding="utf-8")
 
 
+def _load_ip_keys() -> dict[str, dict]:
+    """Load IP-key mappings from JSON file."""
+    if not _IP_KEYS_FILE.exists():
+        return {}
+    try:
+        return json.loads(_IP_KEYS_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save_ip_keys() -> None:
+    """Persist IP-key mappings to JSON file."""
+    _ensure_data_dir()
+    _IP_KEYS_FILE.write_text(json.dumps(_ip_keys, ensure_ascii=False), encoding="utf-8")
+
+
 def flush() -> None:
     """Flush pending changes to disk if dirty. Call on shutdown."""
     global _dirty
     if _dirty:
         _save_keys()
+        _save_ip_keys()
         _dirty = False
 
 
 def init() -> None:
-    """Load keys into memory on startup."""
-    global _keys
+    """Load keys and IP mappings into memory on startup."""
+    global _keys, _ip_keys
     _keys = _load_keys()
+    _ip_keys = _load_ip_keys()
 
 
 def create_key(api_key: str, plan: str = DEFAULT_PLAN) -> dict:
@@ -215,3 +241,44 @@ def list_keys() -> dict[str, dict]:
 def reset_windows() -> None:
     """Clear all rate limit windows. For testing only."""
     _minute_windows.clear()
+
+
+def check_ip_limit(ip: str) -> dict:
+    """
+    Check if IP has not exceeded key creation limit.
+
+    Returns:
+        {"allowed": bool, "keys_created": int, "limit": int, "remaining": int}
+    """
+    if ip not in _ip_keys:
+        return {"allowed": True, "keys_created": 0, "limit": _IP_KEY_LIMIT, "remaining": _IP_KEY_LIMIT}
+
+    entry = _ip_keys[ip]
+    cutoff = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff_str = cutoff.isoformat()
+
+    # Count keys created today
+    recent_keys = [
+        k for k, t in zip(entry["keys"], entry["timestamps"])
+        if t >= cutoff_str
+    ]
+    keys_created = len(recent_keys)
+
+    return {
+        "allowed": keys_created < _IP_KEY_LIMIT,
+        "keys_created": keys_created,
+        "limit": _IP_KEY_LIMIT,
+        "remaining": max(0, _IP_KEY_LIMIT - keys_created),
+    }
+
+
+def record_key_creation(ip: str, api_key: str) -> None:
+    """Record that this IP created this API key."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    if ip not in _ip_keys:
+        _ip_keys[ip] = {"keys": [], "timestamps": []}
+
+    _ip_keys[ip]["keys"].append(api_key)
+    _ip_keys[ip]["timestamps"].append(now)
+    _save_ip_keys()

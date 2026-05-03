@@ -13,7 +13,7 @@ class Plan:
 PLANS: dict[str, Plan] = {
     "free": Plan(
         name="free",
-        monthly_limit=2000,
+        monthly_limit=1000,
         rate_limit_per_minute=20,
     ),
     "starter": Plan(

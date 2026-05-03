@@ -109,13 +109,28 @@ async def usage_endpoint(request: Request) -> JSONResponse:
 @mcp.custom_route("/keys/create", methods=["POST"])
 async def create_key_endpoint(request: Request) -> JSONResponse:
     """Create a free API key. Public endpoint — no auth required."""
+    # Get client IP (Railway/proxy sets X-Forwarded-For)
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if not client_ip:
+        client_ip = request.client.host if request.client else "unknown"
+
+    # Check IP limit (3 keys per 24h)
+    ip_check = usage.check_ip_limit(client_ip)
+    if not ip_check["allowed"]:
+        return JSONResponse(
+            {"error": f"Limite de {ip_check['limit']} keys por IP por dia atingido. Tente novamente amanhã."},
+            status_code=429,
+        )
+
     api_key = f"free-{secrets.token_hex(16)}"
     key_data = usage.create_key(api_key, "free")
+    usage.record_key_creation(client_ip, api_key)
+
     return JSONResponse({
         "api_key": api_key,
         "plan": key_data["plan"],
-        "limit": 2000,
-        "message": "Use this key in the x-api-key header. Free plan: 2000 requests/month, 20/min.",
+        "limit": 1000,
+        "message": "Use this key in the x-api-key header. Free plan: 1000 requests/month, 20/min.",
     })
 
 
