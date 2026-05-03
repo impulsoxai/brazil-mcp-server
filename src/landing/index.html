@@ -581,7 +581,7 @@ input[type="date"].mcp-input{color-scheme:dark}
       <span class="brand-tag">Brazil&nbsp;MCP</span>
     </a>
     <nav class="nav-links">
-      <a href="#playground">PLAYGROUND</a>
+      <a href="#top">PLAYGROUND</a>
       <a href="#ferramentas">FERRAMENTAS</a>
       <a href="#apikey-mount">API KEY</a>
       <a href="https://github.com/impulsoxai/brazil-mcp-server" target="_blank" rel="noopener noreferrer">DOCS</a>
@@ -1011,11 +1011,15 @@ const Playground = ({ status }) => {
                 <button className="btn-ghost-mini" onClick={clearAll}>LIMPAR</button>
               </div>
             </div>
-            <div className="field" style={{marginBottom:16}}>
-              <label className="field-label"><span className="field-name">API Key</span><span className="field-key">x-api-key</span></label>
-              <input type="text" className="mcp-input" value={apiKey} onChange={(e)=>{setApiKey(e.target.value);localStorage.setItem('mcp-api-key',e.target.value)}} placeholder="Cole sua API key aqui (ou gere abaixo)" autoComplete="off"/>
-            </div>
             <div className="form-fields">
+              <div className="field">
+                <label className="field-label" htmlFor="f-apikey">
+                  <span className="field-name">API Key</span>
+                  <span className="req"> *</span>
+                  <span className="field-key">x-api-key</span>
+                </label>
+                <input id="f-apikey" type="text" className="mcp-input" value={apiKey} onChange={(e)=>{setApiKey(e.target.value);localStorage.setItem('mcp-api-key',e.target.value)}} placeholder="Cole sua API key aqui (ou gere abaixo)" autoComplete="off"/>
+              </div>
               {tool.inputs.map((f)=><Field key={f.name} field={f} value={values[f.name]} onChange={setField}/>)}
             </div>
             <div className="form-cta">
