@@ -2,6 +2,7 @@
 
 import sys
 import asyncio
+import secrets
 import uvicorn
 from pathlib import Path
 from starlette.requests import Request
@@ -102,6 +103,19 @@ async def usage_endpoint(request: Request) -> JSONResponse:
         "limit": usage_data["limit"],
         "remaining": usage_data["remaining"],
         "reset_date": usage_data["reset_date"],
+    })
+
+
+@mcp.custom_route("/keys/create", methods=["POST"])
+async def create_key_endpoint(request: Request) -> JSONResponse:
+    """Create a free API key. Public endpoint — no auth required."""
+    api_key = f"free-{secrets.token_hex(16)}"
+    key_data = usage.create_key(api_key, "free")
+    return JSONResponse({
+        "api_key": api_key,
+        "plan": key_data["plan"],
+        "limit": 2000,
+        "message": "Use this key in the x-api-key header. Free plan: 2000 requests/month, 20/min.",
     })
 
 
