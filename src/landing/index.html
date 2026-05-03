@@ -446,6 +446,84 @@ input[type="date"].mcp-input{color-scheme:dark}
 .json-block .jn-bool{color:var(--success);font-style:italic}
 .json-block .jn-null{color:var(--text-muted);font-style:italic}
 
+/* ── API Key Section ─────────────────────────────────────── */
+.apikey-section{
+  max-width:1320px;margin:0 auto;padding:80px 36px;
+}
+.apikey-box{
+  position:relative;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:56px 48px;
+  text-align:center;
+}
+.apikey-box .corner{position:absolute;width:18px;height:18px}
+.apikey-box .corner.tl{top:-1px;left:-1px;border-top:2px solid var(--gold);border-left:2px solid var(--gold);border-radius:12px 0 0 0}
+.apikey-box .corner.tr{top:-1px;right:-1px;border-top:2px solid var(--gold);border-right:2px solid var(--gold);border-radius:0 12px 0 0}
+.apikey-box .corner.bl{bottom:-1px;left:-1px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold);border-radius:0 0 0 12px}
+.apikey-box .corner.br{bottom:-1px;right:-1px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold);border-radius:0 0 12px 0}
+.apikey-title{
+  font-family:var(--font-display);font-size:clamp(22px,3vw,32px);
+  color:var(--text-primary);margin-bottom:12px;font-weight:500;
+}
+.apikey-title .accent{color:var(--gold)}
+.apikey-subtitle{
+  font-family:var(--font-body);font-size:13px;
+  color:var(--text-secondary);margin-bottom:32px;letter-spacing:.08em;
+}
+.apikey-btn{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 36px;border:1px solid var(--gold);border-radius:8px;
+  background:transparent;color:var(--gold);
+  font-family:var(--font-body);font-size:13px;letter-spacing:.12em;
+  text-transform:uppercase;cursor:pointer;
+  transition:background .2s,color .2s,box-shadow .2s;
+}
+.apikey-btn:hover{
+  background:var(--gold);color:var(--bg-deep);
+  box-shadow:0 0 24px rgba(212,175,55,0.25);
+}
+.apikey-btn:disabled{
+  opacity:.5;cursor:not-allowed;
+  background:transparent;color:var(--gold);
+}
+.apikey-result{
+  margin-top:28px;
+  opacity:0;max-height:0;overflow:hidden;
+  transition:opacity .4s var(--ease-out-premium),max-height .4s var(--ease-out-premium);
+}
+.apikey-result.visible{opacity:1;max-height:200px}
+.apikey-label{
+  font-family:var(--font-body);font-size:11px;
+  color:var(--text-secondary);letter-spacing:.15em;
+  text-transform:uppercase;margin-bottom:8px;
+}
+.apikey-key-display{
+  display:inline-flex;align-items:center;gap:12px;
+  background:var(--bg-deep);border:1px solid var(--border-bright);
+  border-radius:8px;padding:14px 20px;
+  font-family:var(--font-body);font-size:14px;
+  color:var(--gold-light);letter-spacing:.06em;
+  word-break:break-all;
+}
+.apikey-copy{
+  padding:8px 16px;border:1px solid var(--gold-dim);border-radius:6px;
+  background:transparent;color:var(--gold);
+  font-family:var(--font-body);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.apikey-copy:hover{background:var(--gold-deep);color:var(--gold-light)}
+.apikey-info{
+  margin-top:16px;
+  font-family:var(--font-body);font-size:11px;
+  color:var(--text-muted);letter-spacing:.06em;
+}
+.apikey-info code{
+  color:var(--gold-dim);font-size:11px;
+}
+
 /* ── Footer ──────────────────────────────────────────────── */
 .footer{
   max-width:1320px;margin:0 auto;padding:36px 36px 72px;
@@ -533,11 +611,13 @@ input[type="date"].mcp-input{color-scheme:dark}
     <div class="hero-meta">
       <span><span class="pip"></span><span class="ttl">ENDPOINT</span> MCP.IMPULSOXAI.COM.BR</span>
       <span><span class="pip"></span><span class="ttl">JSON · POST</span></span>
-      <span><span class="pip"></span><span class="ttl">SEM AUTH</span> · USO ABERTO</span>
+      <span><span class="pip"></span><span class="ttl">AUTH</span> · API KEY NECESSÁRIA</span>
     </div>
   </section>
 
   <section id="playground-mount"></section>
+
+  <section class="apikey-section" id="apikey-mount"></section>
 
   <footer class="footer">
     <div class="footer-dots">
@@ -973,6 +1053,67 @@ const StatusApp = () => {
   );
 };
 
+/* ── API Key Generator ───────────────────────────────────── */
+const ApiKeyGenerator = () => {
+  const [key, setKey] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const generateKey = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(API_BASE + '/keys/create', { method: 'POST' });
+      if (!res.ok) throw new Error('Erro ao gerar chave');
+      const data = await res.json();
+      setKey(data.api_key);
+    } catch (e) {
+      setError('Não foi possível gerar a chave. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyKey = () => {
+    navigator.clipboard.writeText(key);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="apikey-box">
+      <div className="corner tl"></div>
+      <div className="corner tr"></div>
+      <div className="corner bl"></div>
+      <div className="corner br"></div>
+      <h2 className="apikey-title">
+        Gere sua <span className="accent">API Key</span> gratuita
+      </h2>
+      <p className="apikey-subtitle">
+        Plano Free — 2.000 requisições/mês · 20 req/min
+      </p>
+      <button className="apikey-btn" onClick={generateKey} disabled={loading}>
+        {loading ? 'Gerando...' : 'Gerar API Key'}
+      </button>
+      {error && <p className="apikey-info" style={{color:'var(--danger)',marginTop:16}}>{error}</p>}
+      <div className={'apikey-result' + (key ? ' visible' : '')}>
+        <p className="apikey-label">Sua chave de acesso</p>
+        <div style={{display:'inline-flex',alignItems:'center',gap:12,flexWrap:'wrap',justifyContent:'center'}}>
+          <span className="apikey-key-display">{key}</span>
+          <button className="apikey-copy" onClick={copyKey}>
+            {copied ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+        <p className="apikey-info">
+          Use no header <code>x-api-key</code> em cada requisição ao servidor MCP.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('apikey-mount')).render(<ApiKeyGenerator/>);
 ReactDOM.createRoot(document.getElementById('playground-mount')).render(<StatusApp/>);
 </script>
 
