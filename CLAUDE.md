@@ -211,10 +211,6 @@ Todas definidas em `.env` (nunca commitar) e documentadas em `.env.example`:
 MCP_ENV=production                    # production | development
 MCP_PORT=8000                         # porta do servidor
 
-# Rate limiting
-FREE_TIER_DAILY_LIMIT=100             # chamadas/dia no tier free
-PAID_TIER_DAILY_LIMIT=10000           # chamadas/dia no tier pago
-
 # APIs externas (todas gratuitas no tier básico)
 BRASIL_API_BASE=https://brasilapi.com.br/api
 AWESOME_API_BASE=https://economia.awesomeapi.com.br

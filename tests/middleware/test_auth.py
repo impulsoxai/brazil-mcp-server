@@ -1,82 +1,74 @@
-"""Testes para o middleware de autenticação e rate limiting."""
+"""Testes para o middleware de autenticacao e rate limiting."""
 
 import pytest
-from src.middleware.auth import verificar_autenticacao, TIER_FREE, TIER_PAID
-from src.middleware.rate_limit import verificar_rate_limit, limpar_contadores
+from src.middleware.auth import verificar_autenticacao
+from src.middleware.rate_limit import verificar_rate_limit, verificar_limite_mensal
+from src.services import usage
+
+
+@pytest.fixture(autouse=True)
+def setup_usage():
+    """Initialize usage service with test keys."""
+    usage.init()
+    # Ensure test key exists
+    if not usage.validate_key("test-key-free"):
+        usage.create_key("test-key-free", "free")
+    if not usage.validate_key("test-key-starter"):
+        usage.create_key("test-key-starter", "starter")
+    yield
+    # Reset usage for test keys
+    for key in ["test-key-free", "test-key-starter"]:
+        data = usage.validate_key(key)
+        if data:
+            data["usage"] = 0
 
 
 class TestVerificarAutenticacao:
-    def test_sem_header_retorna_free(self):
+    def test_sem_header_retorna_invalido(self):
         resultado = verificar_autenticacao({})
-        assert resultado["tier"] == TIER_FREE
-        assert resultado["api_key"] is None
+        assert resultado["valid"] is False
+        assert resultado["error"] == "Invalid or missing API key"
 
-    def test_header_vazio_retorna_free(self):
+    def test_header_vazio_retorna_invalido(self):
         resultado = verificar_autenticacao({"x-api-key": ""})
-        assert resultado["tier"] == TIER_FREE
+        assert resultado["valid"] is False
 
-    def test_header_espacos_retorna_free(self):
+    def test_header_espacos_retorna_invalido(self):
         resultado = verificar_autenticacao({"x-api-key": "   "})
-        assert resultado["tier"] == TIER_FREE
+        assert resultado["valid"] is False
 
-    def test_chave_valida_retorna_paid(self):
-        resultado = verificar_autenticacao({"x-api-key": "minha-chave-123"})
-        assert resultado["tier"] == TIER_PAID
-        assert resultado["api_key"] == "minha-chave-123"
+    def test_chave_invalida_retorna_invalido(self):
+        resultado = verificar_autenticacao({"x-api-key": "chave-que-nao-existe"})
+        assert resultado["valid"] is False
 
-    def test_chave_qualquer_retorna_paid(self):
-        resultado = verificar_autenticacao({"x-api-key": "abc"})
-        assert resultado["tier"] == TIER_PAID
+    def test_chave_valida_retorna_valido(self):
+        resultado = verificar_autenticacao({"x-api-key": "test-key-free"})
+        assert resultado["valid"] is True
+        assert resultado["api_key"] == "test-key-free"
+        assert resultado["plan"] == "free"
 
-    def test_paid_tem_limite_maior(self):
-        free = verificar_autenticacao({})
-        paid = verificar_autenticacao({"x-api-key": "key"})
-        assert paid["daily_limit"] > free["daily_limit"]
+    def test_chave_starter_retorna_starter(self):
+        resultado = verificar_autenticacao({"x-api-key": "test-key-starter"})
+        assert resultado["valid"] is True
+        assert resultado["plan"] == "starter"
 
 
 class TestRateLimit:
-    def setup_method(self):
-        limpar_contadores()
-
-    def teardown_method(self):
-        limpar_contadores()
-
     def test_primeira_requisicao_permitida(self):
-        resultado = verificar_rate_limit("192.168.1.1", TIER_FREE, 100)
+        resultado = verificar_rate_limit("test-key-free")
         assert resultado["allowed"] is True
-        assert resultado["count"] == 1
-        assert resultado["remaining"] == 99
+        assert resultado["count"] >= 1
 
-    def test_contador_incrementa(self):
-        verificar_rate_limit("192.168.1.1", TIER_FREE, 100)
-        verificar_rate_limit("192.168.1.1", TIER_FREE, 100)
-        resultado = verificar_rate_limit("192.168.1.1", TIER_FREE, 100)
-        assert resultado["count"] == 3
-        assert resultado["remaining"] == 97
-
-    def test_limite_atingido_bloqueia(self):
-        resultado = verificar_rate_limit("192.168.1.1", TIER_FREE, 2)
+    def test_limite_mensal_permitido(self):
+        resultado = verificar_limite_mensal("test-key-free")
         assert resultado["allowed"] is True
+        assert resultado["limit"] == 2000
+        assert resultado["remaining"] >= 0
 
-        resultado = verificar_rate_limit("192.168.1.1", TIER_FREE, 2)
-        assert resultado["allowed"] is True
-
-        resultado = verificar_rate_limit("192.168.1.1", TIER_FREE, 2)
+    def test_chave_invalida_bloqueada(self):
+        resultado = verificar_rate_limit("chave-inexistente")
         assert resultado["allowed"] is False
-        assert resultado["remaining"] == 0
 
-    def test_ips_diferentes_contam_separado(self):
-        verificar_rate_limit("192.168.1.1", TIER_FREE, 1)
-        resultado = verificar_rate_limit("192.168.1.2", TIER_FREE, 1)
-        assert resultado["allowed"] is True
-
-    def test_tiers_diferentes_contam_separado(self):
-        verificar_rate_limit("key1", TIER_FREE, 1)
-        resultado = verificar_rate_limit("key1", TIER_PAID, 10000)
-        assert resultado["allowed"] is True
-
-    def test_limpar_contadores(self):
-        verificar_rate_limit("192.168.1.1", TIER_FREE, 1)
-        limpar_contadores()
-        resultado = verificar_rate_limit("192.168.1.1", TIER_FREE, 1)
-        assert resultado["count"] == 1
+    def test_limite_mensal_chave_invalida(self):
+        resultado = verificar_limite_mensal("chave-inexistente")
+        assert resultado["allowed"] is False

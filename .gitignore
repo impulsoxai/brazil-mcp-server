@@ -32,3 +32,6 @@ htmlcov/
 
 # PROMPT_SPRINT1.md (não commitar)
 PROMPT_SPRINT1.md
+
+# Data (API keys storage)
+data/

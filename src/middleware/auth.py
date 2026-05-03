@@ -1,37 +1,45 @@
-"""Middleware de autenticação — validação de API key."""
+"""Middleware de autenticacao — validacao de API key."""
 
-from src.config import FREE_TIER_DAILY_LIMIT, PAID_TIER_DAILY_LIMIT
-
-
-# Tipos de tier
-TIER_FREE = "free"
-TIER_PAID = "paid"
+from src.services import usage
 
 
 def verificar_autenticacao(headers: dict) -> dict:
     """
-    Verifica o tier do usuário a partir do header X-API-Key.
+    Verifica API key no header x-api-key.
 
     Retorna dict com:
-    - tier: "free" ou "paid"
-    - api_key: a chave usada (ou None para tier free)
-    - daily_limit: limite diário do tier
+    - valid: True se chave valida
+    - api_key: a chave usada
+    - plan: plano do usuario
+    - error: mensagem de erro (ou None)
 
     Regras:
-    - Sem X-API-Key ou chave vazia → tier free (FREE_TIER_DAILY_LIMIT/dia)
-    - X-API-Key não vazia → tier pago (PAID_TIER_DAILY_LIMIT/dia)
+    - Sem x-api-key ou chave vazia → 401
+    - Chave invalida → 401
+    - Chave valida → OK
     """
     api_key = headers.get("x-api-key", "").strip()
 
-    if api_key:
+    if not api_key:
         return {
-            "tier": TIER_PAID,
+            "valid": False,
+            "api_key": None,
+            "plan": None,
+            "error": "Invalid or missing API key",
+        }
+
+    key_data = usage.validate_key(api_key)
+    if not key_data:
+        return {
+            "valid": False,
             "api_key": api_key,
-            "daily_limit": PAID_TIER_DAILY_LIMIT,
+            "plan": None,
+            "error": "Invalid or missing API key",
         }
 
     return {
-        "tier": TIER_FREE,
-        "api_key": None,
-        "daily_limit": FREE_TIER_DAILY_LIMIT,
+        "valid": True,
+        "api_key": api_key,
+        "plan": key_data["plan"],
+        "error": None,
     }

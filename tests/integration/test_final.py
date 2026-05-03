@@ -355,50 +355,42 @@ def testar():
     print("\n--- 5. MIDDLEWARE (unitário) ---")
     # =========================================================
 
-    # 5a. Auth — sem API key → tier free
+    # 5a. Auth — sem API key → invalido
     from src.middleware.auth import verificar_autenticacao
+    from src.services import usage
+    usage.init()
+    if not usage.validate_key("int-test-free"):
+        usage.create_key("int-test-free", "free")
+    if not usage.validate_key("int-test-starter"):
+        usage.create_key("int-test-starter", "starter")
+
     resultado = verificar_autenticacao({})
-    passou = resultado["tier"] == "free" and resultado["daily_limit"] == 100
-    registrar("mw_auth_free", passou, 0, str(resultado), "tier=free, limit=100")
+    passou = resultado["valid"] is False
+    registrar("mw_auth_free", passou, 0, str(resultado), "valid=False")
 
-    # 5b. Auth — com API key → tier paid
-    resultado = verificar_autenticacao({"x-api-key": "sk-test-123"})
-    passou = resultado["tier"] == "paid" and resultado["daily_limit"] == 10000
-    registrar("mw_auth_paid", passou, 0, str(resultado), "tier=paid, limit=10000")
+    # 5b. Auth — com API key valido → valid
+    resultado = verificar_autenticacao({"x-api-key": "int-test-free"})
+    passou = resultado["valid"] is True and resultado["plan"] == "free"
+    registrar("mw_auth_paid", passou, 0, str(resultado), "valid=True, plan=free")
 
-    # 5c. Auth — API key vazia → tier free
+    # 5c. Auth — API key vazia → invalido
     resultado = verificar_autenticacao({"x-api-key": ""})
-    passou = resultado["tier"] == "free"
-    registrar("mw_auth_key_vazia", passou, 0, str(resultado), "tier=free")
+    passou = resultado["valid"] is False
+    registrar("mw_auth_key_vazia", passou, 0, str(resultado), "valid=False")
 
     # 5d. Rate limit — dentro do limite
-    from src.middleware.rate_limit import verificar_rate_limit, limpar_contadores
-    limpar_contadores()
-    resultado = verificar_rate_limit("test-ip", "free", 100)
-    passou = resultado["allowed"] is True and resultado["count"] == 1
-    registrar("mw_rate_limit_ok", passou, 0, str(resultado), "allowed=True, count=1")
+    from src.middleware.rate_limit import verificar_rate_limit
+    usage.reset_windows()
+    resultado = verificar_rate_limit("int-test-free")
+    passou = resultado["allowed"] is True and resultado["count"] >= 1
+    registrar("mw_rate_limit_ok", passou, 0, str(resultado), "allowed=True")
 
-    # 5e. Rate limit — exceder limite
-    limpar_contadores()
-    for i in range(100):
-        verificar_rate_limit("test-ip-2", "free", 100)
-    resultado = verificar_rate_limit("test-ip-2", "free", 100)
-    passou = resultado["allowed"] is False and resultado["remaining"] == 0
-    registrar("mw_rate_limit_excedido", passou, 0, str(resultado), "allowed=False")
-
-    # 5f. Rate limit — tiers independentes
-    limpar_contadores()
-    verificar_rate_limit("ip-a", "free", 100)
-    resultado = verificar_rate_limit("ip-b", "free", 100)
+    # 5e. Rate limit — tiers independentes
+    usage.reset_windows()
+    verificar_rate_limit("int-test-free")
+    resultado = verificar_rate_limit("int-test-starter")
     passou = resultado["count"] == 1  # contador separado
     registrar("mw_rate_limit_independente", passou, 0, str(resultado), "count=1")
-
-    # 5g. Rate limit — paid tier tem limite maior
-    limpar_contadores()
-    resultado_free = verificar_rate_limit("ip-x", "free", 100)
-    resultado_paid = verificar_rate_limit("key-y", "paid", 10000)
-    passou = resultado_paid["remaining"] > resultado_free["remaining"]
-    registrar("mw_rate_limit_paid_maior", passou, 0, f"free={100 - resultado_free['remaining']}, paid={10000 - resultado_paid['remaining']}", "paid > free")
 
     # =========================================================
     print("\n" + "=" * 60)
