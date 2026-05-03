@@ -581,8 +581,9 @@ input[type="date"].mcp-input{color-scheme:dark}
       <span class="brand-tag">Brazil&nbsp;MCP</span>
     </a>
     <nav class="nav-links">
-      <a href="#hero">PLAYGROUND</a>
+      <a href="#playground">PLAYGROUND</a>
       <a href="#ferramentas">FERRAMENTAS</a>
+      <a href="#apikey-mount">API KEY</a>
       <a href="https://github.com/impulsoxai/brazil-mcp-server" target="_blank" rel="noopener noreferrer">DOCS</a>
     </nav>
     <div class="topbar-right" id="status-mount"></div>
@@ -927,6 +928,7 @@ const Playground = ({ status }) => {
   const cat  = React.useMemo(()=>MCP_CATEGORIES.find((c)=>c.id===tool.category),[tool]);
   const [values, setValues] = React.useState(()=>initialValues(tool));
   const [result, setResult] = React.useState({phase:'idle'});
+  const [apiKey, setApiKey] = React.useState(()=>localStorage.getItem('mcp-api-key')||'');
 
   React.useEffect(()=>{ setValues(initialValues(tool)); setResult({phase:'idle'}); },[activeId]);
 
@@ -953,7 +955,9 @@ const Playground = ({ status }) => {
     setResult({phase:'loading',requestPreview:{body:rpcRequest}});
     const t0=performance.now();
     try {
-      const res=await fetch(MCP_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream'},body:JSON.stringify(rpcRequest)});
+      const fetchHeaders={'Content-Type':'application/json','Accept':'application/json, text/event-stream'};
+      if(apiKey) fetchHeaders['x-api-key']=apiKey;
+      const res=await fetch(MCP_ENDPOINT,{method:'POST',headers:fetchHeaders,body:JSON.stringify(rpcRequest)});
       const dur=Math.round(performance.now()-t0);
       if(!res.ok){ setResult({phase:'error',durationMs:dur,error:'HTTP '+res.status+' '+res.statusText}); return; }
       const ct=res.headers.get('content-type')||'';
@@ -1006,6 +1010,10 @@ const Playground = ({ status }) => {
                 <button className="btn-ghost-mini" onClick={fillExample}>EXEMPLO</button>
                 <button className="btn-ghost-mini" onClick={clearAll}>LIMPAR</button>
               </div>
+            </div>
+            <div className="field" style={{marginBottom:16}}>
+              <label className="field-label"><span className="field-name">API Key</span><span className="field-key">x-api-key</span></label>
+              <input type="text" className="mcp-input" value={apiKey} onChange={(e)=>{setApiKey(e.target.value);localStorage.setItem('mcp-api-key',e.target.value)}} placeholder="Cole sua API key aqui (ou gere abaixo)" autoComplete="off"/>
             </div>
             <div className="form-fields">
               {tool.inputs.map((f)=><Field key={f.name} field={f} value={values[f.name]} onChange={setField}/>)}
@@ -1068,6 +1076,7 @@ const ApiKeyGenerator = () => {
       if (!res.ok) throw new Error('Erro ao gerar chave');
       const data = await res.json();
       setKey(data.api_key);
+      localStorage.setItem('mcp-api-key', data.api_key);
     } catch (e) {
       setError('Não foi possível gerar a chave. Tente novamente.');
     } finally {
