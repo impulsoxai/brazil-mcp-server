@@ -134,7 +134,8 @@ def register_tools(mcp: FastMCP) -> None:
 
         try:
             url = f"https://apiprevmet3.inmet.gov.br/previsao/{ibge_code}"
-            response = await http_client.get(url)
+            headers = {"User-Agent": "BrazilMCPServer/1.0"}
+            response = await http_client.get(url, headers=headers)
             response.raise_for_status()
             try:
                 data = response.json()
@@ -213,7 +214,8 @@ def register_tools(mcp: FastMCP) -> None:
 
         try:
             url = f"https://apiprevmet3.inmet.gov.br/alerta/grade/{lat}/{lon}"
-            response = await http_client.get(url)
+            headers = {"User-Agent": "BrazilMCPServer/1.0"}
+            response = await http_client.get(url, headers=headers)
             response.raise_for_status()
             try:
                 data = response.json()
