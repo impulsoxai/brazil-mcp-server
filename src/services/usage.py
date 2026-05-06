@@ -90,6 +90,7 @@ def create_key(api_key: str, plan: str = DEFAULT_PLAN) -> dict:
     now = datetime.now(timezone.utc)
     _keys[api_key] = {
         "plan": plan,
+        "scope": "public",
         "usage": 0,
         "reset_date": _next_reset_date(now),
         "created_at": now.isoformat(),

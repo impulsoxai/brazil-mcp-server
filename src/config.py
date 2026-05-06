@@ -23,3 +23,6 @@ SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 # Telegram (alertas)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+# Chave master ImpulsoX (acesso total, sem rate limit)
+IMPULSOX_MASTER_KEY = os.getenv("IMPULSOX_MASTER_KEY", "")
