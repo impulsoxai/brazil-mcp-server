@@ -1,5 +1,8 @@
 """Resolução de município → código IBGE e coordenadas."""
 
+import json
+from difflib import get_close_matches
+
 from unidecode import unidecode
 
 from src.utils import http_client
@@ -27,7 +30,10 @@ async def _carregar_municipios() -> dict[str, str]:
     try:
         response = await http_client.get(_IBGE_MUNICIPIOS_URL)
         response.raise_for_status()
-        data = response.json()
+        try:
+            data = response.json()
+        except UnicodeDecodeError:
+            data = json.loads(response.content.decode("latin-1"))
     except Exception:
         raise ValueError(
             "❌ Serviço do IBGE indisponível.\n"
@@ -50,6 +56,7 @@ async def resolver_codigo_ibge(municipio: str) -> str:
     Resolve nome do município para código IBGE.
 
     Normaliza input, busca na lista completa do IBGE (cache 24h).
+    Tenta match exato, depois fuzzy (difflib).
     Raises ValueError se não encontrar.
     """
     normalizado = normalizar_municipio(municipio)
@@ -59,7 +66,15 @@ async def resolver_codigo_ibge(municipio: str) -> str:
         return cached
 
     municipios = await _carregar_municipios()
+
+    # Match exato
     codigo = municipios.get(normalizado)
+
+    # Fuzzy match — encontra mais próximo (cutoff 0.6)
+    if not codigo:
+        matches = get_close_matches(normalizado, municipios.keys(), n=1, cutoff=0.6)
+        if matches:
+            codigo = municipios[matches[0]]
 
     if not codigo:
         raise ValueError(
