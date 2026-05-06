@@ -1,5 +1,6 @@
 """Módulo Agrinho — ferramentas agrícolas privadas."""
 
+import json
 import re
 import sys
 from typing import Annotated
@@ -135,7 +136,10 @@ def register_tools(mcp: FastMCP) -> None:
             url = f"https://apiprevmet3.inmet.gov.br/previsao/{ibge_code}"
             response = await http_client.get(url)
             response.raise_for_status()
-            data = response.json()
+            try:
+                data = response.json()
+            except UnicodeDecodeError:
+                data = json.loads(response.content.decode("latin-1"))
         except Exception:
             return (
                 f"❌ Serviço do INMET indisponível no momento.\n"
@@ -211,7 +215,10 @@ def register_tools(mcp: FastMCP) -> None:
             url = f"https://apiprevmet3.inmet.gov.br/alerta/grade/{lat}/{lon}"
             response = await http_client.get(url)
             response.raise_for_status()
-            data = response.json()
+            try:
+                data = response.json()
+            except UnicodeDecodeError:
+                data = json.loads(response.content.decode("latin-1"))
         except Exception:
             return (
                 f"❌ Serviço de alertas do INMET indisponível.\n"
