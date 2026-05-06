@@ -49,3 +49,10 @@ TTL_FERIADOS = 86400       # 24h — feriados nacionais não mudam
 TTL_MOEDA = 300            # 5min — cotação muda rápido
 TTL_BANCO = 3600           # 1h — dados de banco raramente mudam
 TTL_DDD = 0                # permanente — DDDs nunca mudam
+
+# TTLs Agrinho (segundos)
+TTL_COMMODITY = 14400      # 4h — fechamento CEPEA ~15h
+TTL_WEATHER_FORECAST = 10800  # 3h — INMET atualiza 4x/dia
+TTL_WEATHER_ALERT = 1800   # 30min — alertas mudam rápido
+TTL_IBGE_CODE = 86400      # 24h — municípios não mudam
+TTL_LAT_LON = 86400        # 24h — coordenadas fixas
