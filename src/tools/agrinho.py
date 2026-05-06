@@ -209,7 +209,7 @@ def register_tools(mcp: FastMCP) -> None:
 
         try:
             ibge_code = await resolver_codigo_ibge(municipio)
-            lat, lon = await resolver_lat_lon(ibge_code)
+            lat, lon = await resolver_lat_lon(ibge_code, municipio)
         except ValueError as e:
             return str(e)
 

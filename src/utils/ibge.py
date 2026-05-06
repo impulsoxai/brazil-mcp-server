@@ -86,32 +86,35 @@ async def resolver_codigo_ibge(municipio: str) -> str:
     return codigo
 
 
-async def resolver_lat_lon(ibge_code: str) -> tuple[float, float]:
+async def resolver_lat_lon(ibge_code: str, municipio: str = "") -> tuple[float, float]:
     """
     Resolve código IBGE para latitude/longitude.
 
-    Usa Nominatim (OpenStreetMap). Cache 24h.
-    Raises ValueError se não encontrar.
+    Usa Nominatim (OpenStreetMap) com nome do município.
+    Cache 24h. Raises ValueError se não encontrar.
     """
     cached = get_cached(f"latlon:{ibge_code}")
     if cached is not None:
         return cached
 
+    # Nominatim busca por nome, não por código IBGE
+    query = f"{municipio}, Brasil" if municipio else ibge_code
+
     try:
-        url = f"https://nominatim.openstreetmap.org/search?q={ibge_code}&format=json&limit=1"
+        url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1"
         headers = {"User-Agent": "BrazilMCPServer/1.0"}
         response = await http_client.get(url, headers=headers)
         response.raise_for_status()
         data = response.json()
     except Exception:
         raise ValueError(
-            f"❌ Coordenadas não encontradas para código IBGE {ibge_code}.\n"
+            f"❌ Coordenadas não encontradas para {municipio or ibge_code}.\n"
             "Dica: tente novamente em alguns minutos."
         )
 
     if not data:
         raise ValueError(
-            f"❌ Coordenadas não encontradas para código IBGE {ibge_code}."
+            f"❌ Coordenadas não encontradas para {municipio or ibge_code}."
         )
 
     lat = float(data[0]["lat"])
