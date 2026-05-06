@@ -141,7 +141,8 @@ def register_tools(mcp: FastMCP) -> None:
                 data = response.json()
             except UnicodeDecodeError:
                 data = json.loads(response.content.decode("latin-1"))
-        except Exception:
+        except Exception as e:
+            print(f"[AGRINHO] INMET forecast falhou para {municipio} (IBGE {ibge_code}): {e}", file=sys.stderr)
             return (
                 f"❌ Serviço do INMET indisponível no momento.\n"
                 "Dica: tente novamente em alguns minutos."
@@ -221,7 +222,8 @@ def register_tools(mcp: FastMCP) -> None:
                 data = response.json()
             except UnicodeDecodeError:
                 data = json.loads(response.content.decode("latin-1"))
-        except Exception:
+        except Exception as e:
+            print(f"[AGRINHO] INMET alert falhou para {municipio}: {e}", file=sys.stderr)
             return (
                 f"❌ Serviço de alertas do INMET indisponível.\n"
                 "Dica: tente novamente em alguns minutos."
