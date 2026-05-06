@@ -11,11 +11,45 @@ def normalizar_municipio(municipio: str) -> str:
     return unidecode(municipio.strip().lower())
 
 
+_IBGE_MUNICIPIOS_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
+_CACHE_KEY_LISTA = "ibge:lista_municipios"
+
+
+async def _carregar_municipios() -> dict[str, str]:
+    """
+    Carrega lista completa de municípios do IBGE.
+    Cache de 24h. Retorna dict {nome_normalizado: codigo_ibge}.
+    """
+    cached = get_cached(_CACHE_KEY_LISTA)
+    if cached is not None:
+        return cached
+
+    try:
+        response = await http_client.get(_IBGE_MUNICIPIOS_URL)
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
+        raise ValueError(
+            "❌ Serviço do IBGE indisponível.\n"
+            "Dica: tente novamente em alguns minutos."
+        )
+
+    mapping: dict[str, str] = {}
+    for item in data:
+        nome = normalizar_municipio(item.get("nome", ""))
+        codigo = str(item.get("id", ""))
+        if nome and codigo:
+            mapping[nome] = codigo
+
+    set_cached(_CACHE_KEY_LISTA, mapping, TTL_IBGE_CODE)
+    return mapping
+
+
 async def resolver_codigo_ibge(municipio: str) -> str:
     """
     Resolve nome do município para código IBGE.
 
-    Normaliza input, tenta cache, busca via BrasilAPI.
+    Normaliza input, busca na lista completa do IBGE (cache 24h).
     Raises ValueError se não encontrar.
     """
     normalizado = normalizar_municipio(municipio)
@@ -24,28 +58,13 @@ async def resolver_codigo_ibge(municipio: str) -> str:
     if cached is not None:
         return cached
 
-    try:
-        url = f"https://brasilapi.com.br/api/ibge/municipios/v1/{normalizado}"
-        response = await http_client.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except Exception:
-        raise ValueError(
-            f"❌ Município '{municipio}' não encontrado.\n"
-            "Dica: verifique a grafia e tente novamente."
-        )
+    municipios = await _carregar_municipios()
+    codigo = municipios.get(normalizado)
 
-    if not data:
-        raise ValueError(
-            f"❌ Município '{municipio}' não encontrado.\n"
-            "Dica: verifique a grafia e tente novamente."
-        )
-
-    codigo = str(data[0].get("codigo_ibge", ""))
     if not codigo:
         raise ValueError(
-            f"❌ Código IBGE não disponível para '{municipio}'.\n"
-            "Dica: tente o nome completo do município."
+            f"❌ Município '{municipio}' não encontrado.\n"
+            "Dica: verifique a grafia e tente novamente."
         )
 
     set_cached(f"ibge:{normalizado}", codigo, TTL_IBGE_CODE)
