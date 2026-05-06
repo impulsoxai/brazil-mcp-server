@@ -35,3 +35,6 @@ PROMPT_SPRINT1.md
 
 # Data (API keys storage)
 data/
+
+# Git worktrees
+.worktrees/
