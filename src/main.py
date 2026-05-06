@@ -9,8 +9,8 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from mcp.server.fastmcp import FastMCP
 
-from src.config import MCP_PORT, MCP_ENV
-from src.tools import identidade, endereco, pagamentos, calendario, utilidades
+from src.config import MCP_PORT, MCP_ENV, IMPULSOX_MASTER_KEY
+from src.tools import identidade, endereco, pagamentos, calendario, utilidades, agrinho
 from src.monitoring.alertas import enviar_alerta
 from src.middleware.auth import verificar_autenticacao
 from src.middleware.rate_limit import verificar_rate_limit, verificar_limite_mensal
@@ -29,6 +29,7 @@ endereco.register_tools(mcp)
 pagamentos.register_tools(mcp)
 calendario.register_tools(mcp)
 utilidades.register_tools(mcp)
+agrinho.register_tools(mcp)
 
 
 # ── Auth + Rate Limit Middleware ──────────────────────────
@@ -50,28 +51,31 @@ class AuthRateLimitMiddleware:
             headers = dict(scope.get("headers", []))
             x_api_key = headers.get(b"x-api-key", b"").decode()
 
-            # 1. Auth
+            # 1. Auth (now returns scope)
             auth = verificar_autenticacao({"x-api-key": x_api_key})
             if not auth["valid"]:
                 await _reject(scope, receive, send, "Invalid or missing API key", 401)
                 return
 
             api_key = auth["api_key"]
+            is_master = auth.get("scope") == "master"
 
-            # 2. Monthly limit
-            monthly = verificar_limite_mensal(api_key)
-            if not monthly["allowed"]:
-                await _reject(scope, receive, send, "Monthly limit exceeded", 429)
-                return
+            # 2. Skip rate/usage for master key
+            if not is_master:
+                # Monthly limit
+                monthly = verificar_limite_mensal(api_key)
+                if not monthly["allowed"]:
+                    await _reject(scope, receive, send, "Monthly limit exceeded", 429)
+                    return
 
-            # 3. Per-minute rate limit
-            rate = verificar_rate_limit(api_key)
-            if not rate["allowed"]:
-                await _reject(scope, receive, send, "Rate limit exceeded", 429)
-                return
+                # Per-minute rate limit
+                rate = verificar_rate_limit(api_key)
+                if not rate["allowed"]:
+                    await _reject(scope, receive, send, "Rate limit exceeded", 429)
+                    return
 
-            # 4. Increment usage
-            usage.increment_usage(api_key)
+                # Increment usage
+                usage.increment_usage(api_key)
 
         await self.app(scope, receive, send)
 
