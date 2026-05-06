@@ -5,6 +5,20 @@ import re
 import sys
 from typing import Annotated
 
+
+def _ponto_no_poligono(lat: float, lon: float, poligono: list[list[float]]) -> bool:
+    """Ray-casting: verifica se ponto está dentro do polígono."""
+    n = len(poligono)
+    inside = False
+    j = n - 1
+    for i in range(n):
+        yi, xi = poligono[i][1], poligono[i][0]
+        yj, xj = poligono[j][1], poligono[j][0]
+        if ((yi > lat) != (yj > lat)) and (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi):
+            inside = not inside
+        j = i
+    return inside
+
 from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
@@ -214,7 +228,7 @@ def register_tools(mcp: FastMCP) -> None:
             return str(e)
 
         try:
-            url = f"https://apiprevmet3.inmet.gov.br/alerta/grade/{lat}/{lon}"
+            url = "https://apiprevmet3.inmet.gov.br/avisos/ativos"
             headers = {"User-Agent": "BrazilMCPServer/1.0"}
             response = await http_client.get(url, headers=headers)
             response.raise_for_status()
@@ -229,7 +243,23 @@ def register_tools(mcp: FastMCP) -> None:
                 "Dica: tente novamente em alguns minutos."
             )
 
-        if not data:
+        # Filtrar alertas que cobrem o município (point-in-polygon)
+        alertas_do_municipio = []
+        for periodo in ("hoje", "futuro"):
+            for alerta in data.get(periodo, []):
+                try:
+                    poligono_raw = alerta.get("poligono", "")
+                    if not poligono_raw:
+                        continue
+                    poligono = json.loads(poligono_raw)
+                    coords = poligono.get("coordinates", [[]])[0]
+                    if coords and _ponto_no_poligono(lat, lon, coords):
+                        alerta["_periodo"] = periodo
+                        alertas_do_municipio.append(alerta)
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+
+        if not alertas_do_municipio:
             result = (
                 f"✅ Nenhum alerta meteorológico ativo para {municipio.title()}.\n"
                 "Fonte: INMET"
@@ -244,17 +274,15 @@ def register_tools(mcp: FastMCP) -> None:
             "vermelho": "🔴",
         }
 
-        linhas = [f"Alerta para {municipio.title()}:\n"]
+        linhas = [f"⚠️ Alertas para {municipio.title()}:\n"]
 
-        for alerta in (data if isinstance(data, list) else [data]):
-            sev = alerta.get("severidade", alerta.get("severity", "amarelo")).lower()
-            icone = severidade_cores.get(sev, "⚠️")
-            tipo = alerta.get("tipo", alerta.get("event", "Alerta"))
-            descricao = alerta.get("descricao", alerta.get("description", ""))
-            inicio = alerta.get("inicio", alerta.get("onset", ""))
-            fim = alerta.get("fim", alerta.get("expires", ""))
+        for alerta in alertas_do_municipio:
+            periodo = "Hoje" if alerta["_periodo"] == "hoje" else "Previsto"
+            inicio = alerta.get("data_inicio", "")[:10]
+            fim = alerta.get("data_fim", "")[:10]
+            descricao = alerta.get("referencia", "")
 
-            linhas.append(f"{icone} ALERTA {sev.upper()} — {tipo.title()}")
+            linhas.append(f"⚠️ ALERTA — {periodo}")
             if inicio or fim:
                 linhas.append(f"Período: {inicio} até {fim}")
             if descricao:
