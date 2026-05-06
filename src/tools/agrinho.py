@@ -45,7 +45,7 @@ def register_tools(mcp: FastMCP) -> None:
         if commodity_lower not in COMMODITIES_SUPORTADAS:
             lista = ", ".join(COMMODITIES_SUPORTADAS.keys())
             return (
-                f"Commodity '{commodity}' não suportada.\n"
+                f"❌ Commodity '{commodity}' não suportada.\n"
                 f"Dica: commodities disponíveis: {lista}"
             )
 
@@ -73,7 +73,7 @@ def register_tools(mcp: FastMCP) -> None:
                 preco = float(preco_str)
 
                 result = (
-                    f"{commodity.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
+                    f"✅ {commodity.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
                     f"Fonte: CEPEA/ESALQ\n"
                     f"Nota: preço de referência, consulte cepea.esalq.usp.br para cotação exata"
                 )
@@ -95,7 +95,7 @@ def register_tools(mcp: FastMCP) -> None:
                 data_ref = ultimo.get("data", ultimo.get("referencia", ""))
 
                 result = (
-                    f"{commodity.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
+                    f"✅ {commodity.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
                     f"Fonte: CONAB — {data_ref}\n"
                     f"Nota: dados CONAB podem ter atraso de alguns dias"
                 )
@@ -105,7 +105,7 @@ def register_tools(mcp: FastMCP) -> None:
             print(f"[AGRINHO] CONAB falhou para {commodity}: {e}", file=sys.stderr)
 
         return (
-            f"Não foi possível obter preço de {commodity.replace('_', ' ').title()}.\n"
+            f"❌ Não foi possível obter preço de {commodity.replace('_', ' ').title()}.\n"
             "Dica: tente novamente em alguns minutos ou consulte CEPEA (cepea.esalq.usp.br)."
         )
 
@@ -138,14 +138,14 @@ def register_tools(mcp: FastMCP) -> None:
             data = response.json()
         except Exception:
             return (
-                f"Serviço do INMET indisponível no momento.\n"
+                f"❌ Serviço do INMET indisponível no momento.\n"
                 "Dica: tente novamente em alguns minutos."
             )
 
         ibge_str = str(ibge_code)
         if ibge_str not in data:
             return (
-                f"Dados de previsão não disponíveis para {municipio}.\n"
+                f"❌ Dados de previsão não disponíveis para {municipio}.\n"
                 "Dica: verifique o nome do município."
             )
 
@@ -214,13 +214,13 @@ def register_tools(mcp: FastMCP) -> None:
             data = response.json()
         except Exception:
             return (
-                f"Serviço de alertas do INMET indisponível.\n"
+                f"❌ Serviço de alertas do INMET indisponível.\n"
                 "Dica: tente novamente em alguns minutos."
             )
 
         if not data:
             result = (
-                f"Nenhum alerta meteorológico ativo para {municipio.title()}.\n"
+                f"✅ Nenhum alerta meteorológico ativo para {municipio.title()}.\n"
                 "Fonte: INMET"
             )
             set_cached(cache_key, result, TTL_WEATHER_ALERT)

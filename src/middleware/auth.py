@@ -1,5 +1,7 @@
 """Middleware de autenticacao — validacao de API key."""
 
+import secrets
+
 from src.config import IMPULSOX_MASTER_KEY
 from src.services import usage
 
@@ -35,7 +37,7 @@ def verificar_autenticacao(headers: dict) -> dict:
         }
 
     # Master key — acesso total, sem rate limit
-    if IMPULSOX_MASTER_KEY and api_key == IMPULSOX_MASTER_KEY:
+    if IMPULSOX_MASTER_KEY and secrets.compare_digest(api_key, IMPULSOX_MASTER_KEY):
         return {
             "valid": True,
             "api_key": api_key,
