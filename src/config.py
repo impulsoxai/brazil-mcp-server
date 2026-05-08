@@ -26,3 +26,6 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # Chave master ImpulsoX (acesso total, sem rate limit)
 IMPULSOX_MASTER_KEY = os.getenv("IMPULSOX_MASTER_KEY", "")
+
+# Database (PostgreSQL)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://localhost:5432/impulsox_mcp")
