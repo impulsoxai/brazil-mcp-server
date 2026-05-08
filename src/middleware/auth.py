@@ -3,10 +3,10 @@
 import secrets
 
 from src.config import IMPULSOX_MASTER_KEY
-from src.services import usage
+from src.services import database as usage
 
 
-def verificar_autenticacao(headers: dict) -> dict:
+async def verificar_autenticacao(headers: dict) -> dict:
     """
     Verifica API key no header x-api-key.
 
@@ -47,8 +47,8 @@ def verificar_autenticacao(headers: dict) -> dict:
             "error": None,
         }
 
-    # Key normal — valida contra api_keys.json
-    key_data = usage.validate_key(api_key)
+    # Key normal — valida contra PostgreSQL
+    key_data = await usage.validate_key(api_key)
     if not key_data:
         return {
             "valid": False,

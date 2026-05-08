@@ -1,6 +1,6 @@
 """Middleware de rate limiting — delega para usage service."""
 
-from src.services import usage
+from src.services import database as usage
 
 
 def verificar_rate_limit(api_key: str) -> dict:
@@ -16,7 +16,7 @@ def verificar_rate_limit(api_key: str) -> dict:
     return usage.check_rate_limit(api_key)
 
 
-def verificar_limite_mensal(api_key: str) -> dict:
+async def verificar_limite_mensal(api_key: str) -> dict:
     """
     Verifica limite mensal de uso.
 
@@ -26,4 +26,4 @@ def verificar_limite_mensal(api_key: str) -> dict:
     - limit: limite mensal do plano
     - remaining: requisicoes restantes
     """
-    return usage.check_monthly_limit(api_key)
+    return await usage.check_monthly_limit(api_key)
