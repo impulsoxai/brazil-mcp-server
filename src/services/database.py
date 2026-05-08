@@ -175,6 +175,9 @@ def check_rate_limit(api_key: str) -> dict:
 
     NOTE: Intentionally synchronous and in-memory.
     Rate limit windows are lost on server restart — acceptable tradeoff.
+
+    Depends on validate_key() being called first to populate _rate_limit_cache.
+    Unknown keys are denied by default (safe-by-default).
     """
     if api_key not in _rate_limit_cache:
         return {"allowed": False, "count": 0, "limit": 0, "remaining": 0}
@@ -259,8 +262,8 @@ async def log_usage(api_key: str, tool_name: str = None, ip: str = None,
     async with async_session() as session:
         log = UsageLog(
             api_key=api_key,
-            tool_name=tool_name,
-            ip_address=ip,
+            tool_name=tool_name[:100] if tool_name else None,
+            ip_address=ip[:45] if ip else None,
             response_status=status,
             duration_ms=duration_ms,
             created_at=datetime.now(timezone.utc),

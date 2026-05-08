@@ -2,6 +2,7 @@
 
 import sys
 import asyncio
+import ipaddress
 import secrets
 import uvicorn
 from pathlib import Path
@@ -114,8 +115,13 @@ async def usage_endpoint(request: Request) -> JSONResponse:
 async def create_key_endpoint(request: Request) -> JSONResponse:
     """Create a free API key. Public endpoint — no auth required."""
     # Get client IP (Railway/proxy sets X-Forwarded-For)
-    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    if not client_ip:
+    raw_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if raw_ip:
+        try:
+            client_ip = str(ipaddress.ip_address(raw_ip))
+        except ValueError:
+            client_ip = request.client.host if request.client else "unknown"
+    else:
         client_ip = request.client.host if request.client else "unknown"
 
     # Check IP limit (3 keys per 24h)
@@ -130,11 +136,13 @@ async def create_key_endpoint(request: Request) -> JSONResponse:
     key_data = await usage.create_key(api_key, "free")
     await usage.record_key_creation(client_ip, api_key)
 
+    from src.services.plans import get_plan
+    free_plan = get_plan("free")
     return JSONResponse({
         "api_key": api_key,
         "plan": key_data["plan"],
-        "limit": 1000,
-        "message": "Use this key in the x-api-key header. Free plan: 1000 requests/month, 20/min.",
+        "limit": free_plan.monthly_limit,
+        "message": f"Use this key in the x-api-key header. Free plan: {free_plan.monthly_limit} requests/month, {free_plan.rate_limit_per_minute}/min.",
     })
 
 
