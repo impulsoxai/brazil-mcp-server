@@ -53,6 +53,7 @@ async def migrate():
     async with async_session() as session:
         migrated_keys = 0
         skipped_keys = 0
+        now = datetime.now(timezone.utc)
         for api_key, info in keys_data.items():
             existing = await session.execute(
                 select(ApiKey).where(ApiKey.api_key == api_key)
@@ -61,7 +62,6 @@ async def migrate():
                 skipped_keys += 1
                 continue
 
-            now = datetime.now(timezone.utc)
             key = ApiKey(
                 api_key=api_key,
                 plan=info.get("plan", "free"),

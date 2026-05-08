@@ -21,9 +21,6 @@ _minute_windows: dict[str, deque] = {}
 # Rate limit cache: {api_key: limit_per_minute} — populated by validate_key
 _rate_limit_cache: dict[str, int] = {}
 
-# Default rate limit for unknown keys
-_DEFAULT_RATE_LIMIT = 20
-
 
 def cleanup_stale_windows(max_age_seconds: int = 300) -> int:
     """Remove _minute_windows entries older than max_age_seconds. Returns count removed."""
@@ -40,16 +37,6 @@ async def init_db() -> None:
     """Create tables if they don't exist."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-
-async def flush() -> None:
-    """No-op for PostgreSQL (writes are immediate)."""
-    pass
-
-
-async def init() -> None:
-    """Alias for init_db — matches usage.py interface."""
-    await init_db()
 
 
 # ── API Key Operations ──────────────────────────────────────
@@ -98,9 +85,10 @@ async def validate_key(api_key: str) -> dict | None:
         if not row:
             return None
 
-        if await _reset_if_needed(session, row):
+        reset_happened = await _reset_if_needed(session, row)
+        if reset_happened:
             await session.commit()
-        await session.refresh(row)
+            await session.refresh(row)
 
         # Cache rate limit for this key
         plan = get_plan(row.plan)
@@ -126,9 +114,10 @@ async def get_usage(api_key: str) -> dict | None:
         if not row:
             return None
 
-        if await _reset_if_needed(session, row):
+        reset_happened = await _reset_if_needed(session, row)
+        if reset_happened:
             await session.commit()
-        await session.refresh(row)
+            await session.refresh(row)
 
         plan = get_plan(row.plan)
         return {
@@ -162,9 +151,10 @@ async def check_monthly_limit(api_key: str) -> dict:
         if not row:
             return {"allowed": False, "usage": 0, "limit": 0, "remaining": 0}
 
-        if await _reset_if_needed(session, row):
+        reset_happened = await _reset_if_needed(session, row)
+        if reset_happened:
             await session.commit()
-        await session.refresh(row)
+            await session.refresh(row)
 
         plan = get_plan(row.plan)
         usage = row.monthly_usage
@@ -188,6 +178,8 @@ def check_rate_limit(api_key: str) -> dict:
     """
     if api_key not in _rate_limit_cache:
         return {"allowed": False, "count": 0, "limit": 0, "remaining": 0}
+
+    cleanup_stale_windows()
 
     limit = _rate_limit_cache[api_key]
 
@@ -221,13 +213,14 @@ def check_rate_limit(api_key: str) -> dict:
 
 async def check_ip_limit(ip: str, limit: int = 3) -> dict:
     """Check if IP has not exceeded key creation limit (per day)."""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     async with async_session() as session:
         result = await session.execute(
             select(func.count()).select_from(IpFingerprint).where(
                 IpFingerprint.ip_address == ip,
-                IpFingerprint.created_at >= f"{today}T00:00:00+00:00"
+                IpFingerprint.created_at >= today_start,
             )
         )
         keys_created = result.scalar() or 0
