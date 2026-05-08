@@ -31,6 +31,16 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _parse_date(value: str | None, fallback: datetime) -> datetime:
+    """Parse ISO date string with fallback on malformed input."""
+    if not value:
+        return fallback
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return fallback
+
+
 async def migrate():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -59,7 +69,7 @@ async def migrate():
                 reset_date=info.get("reset_date", now.isoformat()),
                 status="active",
                 ip_created=None,
-                created_at=datetime.fromisoformat(info["created_at"]) if "created_at" in info else now,
+                created_at=_parse_date(info.get("created_at"), now),
                 updated_at=now,
             )
             session.add(key)
@@ -71,7 +81,7 @@ async def migrate():
                 fingerprint = IpFingerprint(
                     ip_address=ip,
                     api_key=api_key,
-                    created_at=datetime.fromisoformat(timestamp),
+                    created_at=_parse_date(timestamp, now),
                 )
                 session.add(fingerprint)
                 migrated_ips += 1

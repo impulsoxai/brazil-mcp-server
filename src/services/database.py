@@ -25,6 +25,15 @@ _rate_limit_cache: dict[str, int] = {}
 _DEFAULT_RATE_LIMIT = 20
 
 
+def cleanup_stale_windows(max_age_seconds: int = 300) -> int:
+    """Remove _minute_windows entries older than max_age_seconds. Returns count removed."""
+    now = time.time()
+    stale_keys = [k for k, ts in _minute_windows.items() if not ts or (now - ts[-1]) > max_age_seconds]
+    for k in stale_keys:
+        del _minute_windows[k]
+    return len(stale_keys)
+
+
 # ── Lifecycle ────────────────────────────────────────────────
 
 async def init_db() -> None:
@@ -89,7 +98,8 @@ async def validate_key(api_key: str) -> dict | None:
         if not row:
             return None
 
-        await _reset_if_needed(session, row)
+        if await _reset_if_needed(session, row):
+            await session.commit()
         await session.refresh(row)
 
         # Cache rate limit for this key
@@ -116,7 +126,8 @@ async def get_usage(api_key: str) -> dict | None:
         if not row:
             return None
 
-        await _reset_if_needed(session, row)
+        if await _reset_if_needed(session, row):
+            await session.commit()
         await session.refresh(row)
 
         plan = get_plan(row.plan)
@@ -151,7 +162,8 @@ async def check_monthly_limit(api_key: str) -> dict:
         if not row:
             return {"allowed": False, "usage": 0, "limit": 0, "remaining": 0}
 
-        await _reset_if_needed(session, row)
+        if await _reset_if_needed(session, row):
+            await session.commit()
         await session.refresh(row)
 
         plan = get_plan(row.plan)
@@ -174,7 +186,10 @@ def check_rate_limit(api_key: str) -> dict:
     NOTE: Intentionally synchronous and in-memory.
     Rate limit windows are lost on server restart — acceptable tradeoff.
     """
-    limit = _rate_limit_cache.get(api_key, _DEFAULT_RATE_LIMIT)
+    if api_key not in _rate_limit_cache:
+        return {"allowed": False, "count": 0, "limit": 0, "remaining": 0}
+
+    limit = _rate_limit_cache[api_key]
 
     now = time.time()
     window_start = now - 60
@@ -296,8 +311,11 @@ async def cancel_key(api_key: str) -> bool:
 
 # ── Helpers ─────────────────────────────────────────────────
 
-async def _reset_if_needed(session: AsyncSession, row: ApiKey) -> None:
-    """Reset monthly usage if reset_date has passed."""
+async def _reset_if_needed(session: AsyncSession, row: ApiKey) -> bool:
+    """Reset monthly usage if reset_date has passed. Returns True if reset happened.
+
+    Caller is responsible for committing the session.
+    """
     now = datetime.now(timezone.utc)
     reset_date = datetime.fromisoformat(row.reset_date)
     if now >= reset_date:
@@ -305,7 +323,8 @@ async def _reset_if_needed(session: AsyncSession, row: ApiKey) -> None:
         row.monthly_usage = 0
         row.reset_date = new_reset
         row.updated_at = now
-        await session.commit()
+        return True
+    return False
 
 
 def _next_reset_date(now: datetime) -> str:
