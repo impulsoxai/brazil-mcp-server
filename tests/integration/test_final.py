@@ -357,40 +357,45 @@ def testar():
 
     # 5a. Auth — sem API key → invalido
     from src.middleware.auth import verificar_autenticacao
-    from src.services import usage
-    usage.init()
-    if not usage.validate_key("int-test-free"):
-        usage.create_key("int-test-free", "free")
-    if not usage.validate_key("int-test-starter"):
-        usage.create_key("int-test-starter", "starter")
+    from src.services import database as usage
 
-    resultado = verificar_autenticacao({})
-    passou = resultado["valid"] is False
-    registrar("mw_auth_free", passou, 0, str(resultado), "valid=False")
+    async def _test_middleware():
+        await usage.init_db()
+        # Create test keys if they don't exist
+        existing = await usage.validate_key("int-test-free")
+        if not existing:
+            await usage.create_key("int-test-free", "free")
+        existing = await usage.validate_key("int-test-starter")
+        if not existing:
+            await usage.create_key("int-test-starter", "starter")
 
-    # 5b. Auth — com API key valido → valid
-    resultado = verificar_autenticacao({"x-api-key": "int-test-free"})
-    passou = resultado["valid"] is True and resultado["plan"] == "free"
-    registrar("mw_auth_paid", passou, 0, str(resultado), "valid=True, plan=free")
+        resultado = await verificar_autenticacao({})
+        passou = resultado["valid"] is False
+        registrar("mw_auth_free", passou, 0, str(resultado), "valid=False")
 
-    # 5c. Auth — API key vazia → invalido
-    resultado = verificar_autenticacao({"x-api-key": ""})
-    passou = resultado["valid"] is False
-    registrar("mw_auth_key_vazia", passou, 0, str(resultado), "valid=False")
+        # 5b. Auth — com API key valido → valid
+        resultado = await verificar_autenticacao({"x-api-key": "int-test-free"})
+        passou = resultado["valid"] is True and resultado["plan"] == "free"
+        registrar("mw_auth_paid", passou, 0, str(resultado), "valid=True, plan=free")
 
-    # 5d. Rate limit — dentro do limite
-    from src.middleware.rate_limit import verificar_rate_limit
-    usage.reset_windows()
-    resultado = verificar_rate_limit("int-test-free")
-    passou = resultado["allowed"] is True and resultado["count"] >= 1
-    registrar("mw_rate_limit_ok", passou, 0, str(resultado), "allowed=True")
+        # 5c. Auth — API key vazia → invalido
+        resultado = await verificar_autenticacao({"x-api-key": ""})
+        passou = resultado["valid"] is False
+        registrar("mw_auth_key_vazia", passou, 0, str(resultado), "valid=False")
 
-    # 5e. Rate limit — tiers independentes
-    usage.reset_windows()
-    verificar_rate_limit("int-test-free")
-    resultado = verificar_rate_limit("int-test-starter")
-    passou = resultado["count"] == 1  # contador separado
-    registrar("mw_rate_limit_independente", passou, 0, str(resultado), "count=1")
+        # 5d. Rate limit — dentro do limite
+        from src.middleware.rate_limit import verificar_rate_limit
+        resultado = verificar_rate_limit("int-test-free")
+        passou = resultado["allowed"] is True and resultado["count"] >= 1
+        registrar("mw_rate_limit_ok", passou, 0, str(resultado), "allowed=True")
+
+        # 5e. Rate limit — tiers independentes
+        verificar_rate_limit("int-test-free")  # reset counter for next check
+        resultado = verificar_rate_limit("int-test-starter")
+        passou = resultado["count"] == 1  # contador separado
+        registrar("mw_rate_limit_independente", passou, 0, str(resultado), "count=1")
+
+    asyncio.run(_test_middleware())
 
     # =========================================================
     print("\n" + "=" * 60)
