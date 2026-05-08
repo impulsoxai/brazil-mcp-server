@@ -1,193 +1,161 @@
-"""SQLite database for API key management and paid plans.
+"""PostgreSQL database for API key management and paid plans.
 
-Replaces JSON files for production use. File-based, no external dependencies.
-Database stored in data/brazil_mcp.db (gitignored).
+Replaces JSON-based usage.py with SQLAlchemy async + asyncpg.
+Rate limit per-minute stays in-memory (deque).
 """
 
-import json
-import sqlite3
+import time
+from collections import deque
 from datetime import datetime, timezone
-from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "brazil_mcp.db"
+from sqlalchemy import select, func, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-
-def _ensure_data_dir() -> None:
-    """Create data directory if it doesn't exist."""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+from src.models import Base, engine, async_session, ApiKey, IpFingerprint, UsageLog
+from src.services.plans import get_plan
 
 
-def get_connection() -> sqlite3.Connection:
-    """Get a database connection with row_factory."""
-    _ensure_data_dir()
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+# In-memory rate limit windows: {api_key: deque of timestamps}
+_minute_windows: dict[str, deque] = {}
+
+# Rate limit cache: {api_key: limit_per_minute} — populated by validate_key
+_rate_limit_cache: dict[str, int] = {}
+
+# Default rate limit for unknown keys
+_DEFAULT_RATE_LIMIT = 20
 
 
-def init_db() -> None:
+# ── Lifecycle ────────────────────────────────────────────────
+
+async def init_db() -> None:
     """Create tables if they don't exist."""
-    conn = get_connection()
-    try:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS api_keys (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                api_key TEXT UNIQUE NOT NULL,
-                plan TEXT NOT NULL DEFAULT 'free',
-                monthly_usage INTEGER NOT NULL DEFAULT 0,
-                reset_date TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'active',
-                email TEXT,
-                stripe_customer_id TEXT,
-                stripe_subscription_id TEXT,
-                ip_created TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-            CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key);
-            CREATE INDEX IF NOT EXISTS idx_api_keys_email ON api_keys(email);
-            CREATE INDEX IF NOT EXISTS idx_api_keys_stripe ON api_keys(stripe_customer_id);
 
-            CREATE TABLE IF NOT EXISTS ip_fingerprints (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ip_address TEXT NOT NULL,
-                api_key TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            );
+async def flush() -> None:
+    """No-op for PostgreSQL (writes are immediate)."""
+    pass
 
-            CREATE INDEX IF NOT EXISTS idx_ip_address ON ip_fingerprints(ip_address);
-            CREATE INDEX IF NOT EXISTS idx_ip_created ON ip_fingerprints(ip_address, created_at);
 
-            CREATE TABLE IF NOT EXISTS usage_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                api_key TEXT NOT NULL,
-                tool_name TEXT,
-                ip_address TEXT,
-                response_status INTEGER,
-                duration_ms REAL,
-                created_at TEXT NOT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_usage_key ON usage_logs(api_key);
-            CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_logs(created_at);
-        """)
-        conn.commit()
-    finally:
-        conn.close()
+async def init() -> None:
+    """Alias for init_db — matches usage.py interface."""
+    await init_db()
 
 
 # ── API Key Operations ──────────────────────────────────────
 
-def create_key(api_key: str, plan: str = "free", email: str = None,
-               stripe_customer_id: str = None, stripe_subscription_id: str = None,
-               ip_created: str = None) -> dict:
+async def create_key(api_key: str, plan: str = "free", email: str = None,
+                     stripe_customer_id: str = None, stripe_subscription_id: str = None,
+                     ip_created: str = None) -> dict:
     """Create a new API key in the database."""
     now = datetime.now(timezone.utc)
     reset_date = _next_reset_date(now)
 
-    conn = get_connection()
-    try:
-        conn.execute("""
-            INSERT INTO api_keys (api_key, plan, monthly_usage, reset_date, status,
-                                  email, stripe_customer_id, stripe_subscription_id,
-                                  ip_created, created_at, updated_at)
-            VALUES (?, ?, 0, ?, 'active', ?, ?, ?, ?, ?, ?)
-        """, (api_key, plan, reset_date, email, stripe_customer_id,
-              stripe_subscription_id, ip_created, now.isoformat(), now.isoformat()))
-        conn.commit()
-        return {
-            "api_key": api_key,
-            "plan": plan,
-            "usage": 0,
-            "reset_date": reset_date,
-            "status": "active",
-            "email": email,
-        }
-    finally:
-        conn.close()
-
-
-def validate_key(api_key: str) -> dict | None:
-    """Validate API key. Returns key data or None if invalid."""
-    conn = get_connection()
-    try:
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE api_key = ? AND status = 'active'",
-            (api_key,)
-        ).fetchone()
-        if not row:
-            return None
-        _reset_if_needed(conn, row)
-        return dict(row)
-    finally:
-        conn.close()
-
-
-def get_usage(api_key: str) -> dict | None:
-    """Get usage info for an API key."""
-    from src.services.plans import get_plan
-
-    conn = get_connection()
-    try:
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE api_key = ?", (api_key,)
-        ).fetchone()
-        if not row:
-            return None
-
-        _reset_if_needed(conn, row)
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE api_key = ?", (api_key,)
-        ).fetchone()
-
-        plan = get_plan(row["plan"])
-        return {
-            "plan": row["plan"],
-            "usage": row["monthly_usage"],
-            "limit": plan.monthly_limit,
-            "remaining": max(0, plan.monthly_limit - row["monthly_usage"]),
-            "reset_date": row["reset_date"],
-        }
-    finally:
-        conn.close()
-
-
-def increment_usage(api_key: str) -> None:
-    """Increment usage counter for an API key."""
-    conn = get_connection()
-    try:
-        conn.execute(
-            "UPDATE api_keys SET monthly_usage = monthly_usage + 1, updated_at = ? WHERE api_key = ?",
-            (datetime.now(timezone.utc).isoformat(), api_key)
+    async with async_session() as session:
+        key = ApiKey(
+            api_key=api_key,
+            plan=plan,
+            monthly_usage=0,
+            reset_date=reset_date,
+            status="active",
+            email=email,
+            stripe_customer_id=stripe_customer_id,
+            stripe_subscription_id=stripe_subscription_id,
+            ip_created=ip_created,
+            created_at=now,
+            updated_at=now,
         )
-        conn.commit()
-    finally:
-        conn.close()
+        session.add(key)
+        await session.commit()
+
+    return {
+        "api_key": api_key,
+        "plan": plan,
+        "usage": 0,
+        "reset_date": reset_date,
+        "status": "active",
+        "email": email,
+    }
 
 
-def check_monthly_limit(api_key: str) -> dict:
+async def validate_key(api_key: str) -> dict | None:
+    """Validate API key. Returns key data or None if invalid."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(ApiKey).where(ApiKey.api_key == api_key, ApiKey.status == "active")
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+
+        await _reset_if_needed(session, row)
+        await session.refresh(row)
+
+        # Cache rate limit for this key
+        plan = get_plan(row.plan)
+        _rate_limit_cache[api_key] = plan.rate_limit_per_minute
+
+        return {
+            "api_key": row.api_key,
+            "plan": row.plan,
+            "scope": "public",
+            "usage": row.monthly_usage,
+            "reset_date": row.reset_date,
+            "status": row.status,
+        }
+
+
+async def get_usage(api_key: str) -> dict | None:
+    """Get usage info for an API key."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(ApiKey).where(ApiKey.api_key == api_key)
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+
+        await _reset_if_needed(session, row)
+        await session.refresh(row)
+
+        plan = get_plan(row.plan)
+        return {
+            "plan": row.plan,
+            "usage": row.monthly_usage,
+            "limit": plan.monthly_limit,
+            "remaining": max(0, plan.monthly_limit - row.monthly_usage),
+            "reset_date": row.reset_date,
+        }
+
+
+async def increment_usage(api_key: str) -> None:
+    """Increment usage counter for an API key."""
+    now = datetime.now(timezone.utc)
+    async with async_session() as session:
+        await session.execute(
+            update(ApiKey)
+            .where(ApiKey.api_key == api_key)
+            .values(monthly_usage=ApiKey.monthly_usage + 1, updated_at=now)
+        )
+        await session.commit()
+
+
+async def check_monthly_limit(api_key: str) -> dict:
     """Check if API key has remaining monthly quota."""
-    from src.services.plans import get_plan
-
-    conn = get_connection()
-    try:
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE api_key = ? AND status = 'active'",
-            (api_key,)
-        ).fetchone()
+    async with async_session() as session:
+        result = await session.execute(
+            select(ApiKey).where(ApiKey.api_key == api_key, ApiKey.status == "active")
+        )
+        row = result.scalar_one_or_none()
         if not row:
             return {"allowed": False, "usage": 0, "limit": 0, "remaining": 0}
 
-        _reset_if_needed(conn, row)
-        row = conn.execute(
-            "SELECT * FROM api_keys WHERE api_key = ?", (api_key,)
-        ).fetchone()
+        await _reset_if_needed(session, row)
+        await session.refresh(row)
 
-        plan = get_plan(row["plan"])
-        usage = row["monthly_usage"]
+        plan = get_plan(row.plan)
+        usage = row.monthly_usage
         remaining = max(0, plan.monthly_limit - usage)
 
         return {
@@ -196,186 +164,148 @@ def check_monthly_limit(api_key: str) -> dict:
             "limit": plan.monthly_limit,
             "remaining": remaining,
         }
-    finally:
-        conn.close()
+
+
+# ── Rate Limit (in-memory) ─────────────────────────────────
+
+def check_rate_limit(api_key: str) -> dict:
+    """Check per-minute rate limit using sliding window with deque.
+
+    NOTE: Intentionally synchronous and in-memory.
+    Rate limit windows are lost on server restart — acceptable tradeoff.
+    """
+    limit = _rate_limit_cache.get(api_key, _DEFAULT_RATE_LIMIT)
+
+    now = time.time()
+    window_start = now - 60
+
+    if api_key not in _minute_windows:
+        _minute_windows[api_key] = deque()
+
+    timestamps = _minute_windows[api_key]
+
+    while timestamps and timestamps[0] <= window_start:
+        timestamps.popleft()
+
+    count = len(timestamps)
+
+    if count >= limit:
+        return {"allowed": False, "count": count, "limit": limit, "remaining": 0}
+
+    timestamps.append(now)
+
+    return {
+        "allowed": True,
+        "count": count + 1,
+        "limit": limit,
+        "remaining": limit - count - 1,
+    }
 
 
 # ── IP Fingerprint Operations ───────────────────────────────
 
-def check_ip_limit(ip: str, limit: int = 3) -> dict:
+async def check_ip_limit(ip: str, limit: int = 3) -> dict:
     """Check if IP has not exceeded key creation limit (per day)."""
-    conn = get_connection()
-    try:
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM ip_fingerprints WHERE ip_address = ? AND created_at >= ?",
-            (ip, today + "T00:00:00")
-        ).fetchone()
-        keys_created = row["cnt"]
-        return {
-            "allowed": keys_created < limit,
-            "keys_created": keys_created,
-            "limit": limit,
-            "remaining": max(0, limit - keys_created),
-        }
-    finally:
-        conn.close()
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count()).select_from(IpFingerprint).where(
+                IpFingerprint.ip_address == ip,
+                IpFingerprint.created_at >= f"{today}T00:00:00+00:00"
+            )
+        )
+        keys_created = result.scalar() or 0
+
+    return {
+        "allowed": keys_created < limit,
+        "keys_created": keys_created,
+        "limit": limit,
+        "remaining": max(0, limit - keys_created),
+    }
 
 
-def record_key_creation(ip: str, api_key: str) -> None:
+async def record_key_creation(ip: str, api_key: str) -> None:
     """Record that this IP created this API key."""
-    conn = get_connection()
-    try:
-        now = datetime.now(timezone.utc).isoformat()
-        conn.execute(
-            "INSERT INTO ip_fingerprints (ip_address, api_key, created_at) VALUES (?, ?, ?)",
-            (ip, api_key, now)
+    now = datetime.now(timezone.utc)
+
+    async with async_session() as session:
+        fingerprint = IpFingerprint(
+            ip_address=ip,
+            api_key=api_key,
+            created_at=now,
         )
-        conn.execute(
-            "UPDATE api_keys SET ip_created = ? WHERE api_key = ?",
-            (ip, api_key)
+        session.add(fingerprint)
+
+        await session.execute(
+            update(ApiKey).where(ApiKey.api_key == api_key).values(ip_created=ip)
         )
-        conn.commit()
-    finally:
-        conn.close()
+        await session.commit()
 
 
 # ── Usage Logging ───────────────────────────────────────────
 
-def log_usage(api_key: str, tool_name: str = None, ip: str = None,
-              status: int = None, duration_ms: float = None) -> None:
+async def log_usage(api_key: str, tool_name: str = None, ip: str = None,
+                    status: int = None, duration_ms: float = None) -> None:
     """Log a tool call for analytics."""
-    conn = get_connection()
-    try:
-        conn.execute(
-            "INSERT INTO usage_logs (api_key, tool_name, ip_address, response_status, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (api_key, tool_name, ip, status, duration_ms, datetime.now(timezone.utc).isoformat())
+    async with async_session() as session:
+        log = UsageLog(
+            api_key=api_key,
+            tool_name=tool_name,
+            ip_address=ip,
+            response_status=status,
+            duration_ms=duration_ms,
+            created_at=datetime.now(timezone.utc),
         )
-        conn.commit()
-    finally:
-        conn.close()
-
-
-def get_usage_stats(api_key: str = None, days: int = 30) -> dict:
-    """Get usage statistics. If api_key provided, stats for that key only."""
-    conn = get_connection()
-    try:
-        cutoff = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        if api_key:
-            row = conn.execute(
-                "SELECT COUNT(*) as total, AVG(duration_ms) as avg_ms FROM usage_logs WHERE api_key = ? AND created_at >= ?",
-                (api_key, cutoff)
-            ).fetchone()
-        else:
-            row = conn.execute(
-                "SELECT COUNT(*) as total, AVG(duration_ms) as avg_ms FROM usage_logs WHERE created_at >= ?",
-                (cutoff,)
-            ).fetchone()
-        return {"total_requests": row["total"], "avg_duration_ms": row["avg_ms"]}
-    finally:
-        conn.close()
+        session.add(log)
+        await session.commit()
 
 
 # ── Admin Operations ────────────────────────────────────────
 
-def list_keys() -> list[dict]:
+async def list_keys() -> list[dict]:
     """List all API keys (admin use)."""
-    conn = get_connection()
-    try:
-        rows = conn.execute("SELECT * FROM api_keys ORDER BY created_at DESC").fetchall()
-        return [dict(r) for r in rows]
-    finally:
-        conn.close()
+    async with async_session() as session:
+        result = await session.execute(select(ApiKey).order_by(ApiKey.created_at.desc()))
+        rows = result.scalars().all()
+        return [
+            {
+                "api_key": r.api_key,
+                "plan": r.plan,
+                "usage": r.monthly_usage,
+                "status": r.status,
+                "email": r.email,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in rows
+        ]
 
 
-def update_key_plan(api_key: str, plan: str, stripe_customer_id: str = None,
-                    stripe_subscription_id: str = None, email: str = None) -> bool:
-    """Update a key's plan (admin or webhook use)."""
-    conn = get_connection()
-    try:
-        updates = ["plan = ?", "updated_at = ?"]
-        params = [plan, datetime.now(timezone.utc).isoformat()]
-        if stripe_customer_id:
-            updates.append("stripe_customer_id = ?")
-            params.append(stripe_customer_id)
-        if stripe_subscription_id:
-            updates.append("stripe_subscription_id = ?")
-            params.append(stripe_subscription_id)
-        if email:
-            updates.append("email = ?")
-            params.append(email)
-        params.append(api_key)
-        conn.execute(f"UPDATE api_keys SET {', '.join(updates)} WHERE api_key = ?", params)
-        conn.commit()
-        return conn.total_changes > 0
-    finally:
-        conn.close()
-
-
-def cancel_key(api_key: str) -> bool:
+async def cancel_key(api_key: str) -> bool:
     """Cancel/deactivate an API key."""
-    conn = get_connection()
-    try:
-        conn.execute(
-            "UPDATE api_keys SET status = 'cancelled', updated_at = ? WHERE api_key = ?",
-            (datetime.now(timezone.utc).isoformat(), api_key)
+    now = datetime.now(timezone.utc)
+    async with async_session() as session:
+        result = await session.execute(
+            update(ApiKey)
+            .where(ApiKey.api_key == api_key)
+            .values(status="cancelled", updated_at=now)
         )
-        conn.commit()
-        return conn.total_changes > 0
-    finally:
-        conn.close()
-
-
-# ── Migration from JSON ─────────────────────────────────────
-
-def migrate_from_json() -> int:
-    """Migrate existing JSON data to SQLite. Returns count of migrated keys."""
-    json_path = Path(__file__).parent.parent.parent / "data" / "api_keys.json"
-    if not json_path.exists():
-        return 0
-
-    try:
-        data = json.loads(json_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return 0
-
-    conn = get_connection()
-    migrated = 0
-    try:
-        for api_key, info in data.items():
-            existing = conn.execute(
-                "SELECT 1 FROM api_keys WHERE api_key = ?", (api_key,)
-            ).fetchone()
-            if existing:
-                continue
-            now = datetime.now(timezone.utc).isoformat()
-            conn.execute("""
-                INSERT INTO api_keys (api_key, plan, monthly_usage, reset_date, status,
-                                      ip_created, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'active', ?, ?, ?)
-            """, (api_key, info.get("plan", "free"), info.get("usage", 0),
-                  info.get("reset_date", now), None, info.get("created_at", now), now))
-            migrated += 1
-        conn.commit()
-    finally:
-        conn.close()
-
-    return migrated
+        await session.commit()
+        return result.rowcount > 0
 
 
 # ── Helpers ─────────────────────────────────────────────────
 
-def _reset_if_needed(conn: sqlite3.Connection, row: sqlite3.Row) -> None:
+async def _reset_if_needed(session: AsyncSession, row: ApiKey) -> None:
     """Reset monthly usage if reset_date has passed."""
     now = datetime.now(timezone.utc)
-    reset_date = datetime.fromisoformat(row["reset_date"])
+    reset_date = datetime.fromisoformat(row.reset_date)
     if now >= reset_date:
         new_reset = _next_reset_date(now)
-        conn.execute(
-            "UPDATE api_keys SET monthly_usage = 0, reset_date = ?, updated_at = ? WHERE api_key = ?",
-            (new_reset, now.isoformat(), row["api_key"])
-        )
-        conn.commit()
+        row.monthly_usage = 0
+        row.reset_date = new_reset
+        row.updated_at = now
+        await session.commit()
 
 
 def _next_reset_date(now: datetime) -> str:
