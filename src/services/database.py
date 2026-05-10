@@ -97,7 +97,7 @@ async def validate_key(api_key: str) -> dict | None:
         return {
             "api_key": row.api_key,
             "plan": row.plan,
-            "scope": "public",
+            "scope": row.plan if row.plan in ("premium_t1", "premium_t2", "master") else "public",
             "usage": row.monthly_usage,
             "reset_date": row.reset_date,
             "status": row.status,
