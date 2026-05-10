@@ -72,11 +72,16 @@ CONVERSION_FACTORS = {
 PG_CACHE_COMMODITIES = {"arroz", "feijao"}
 
 
+YAHOO_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
+
+
 async def _fetch_yahoo_price(symbol: str) -> float | None:
     """Fetch current price from Yahoo Finance API. Returns price in cents or None."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     try:
-        response = await http_client.get(url, timeout=10.0)
+        response = await http_client.get(url, timeout=10.0, headers=YAHOO_HEADERS)
         response.raise_for_status()
         data = response.json()
         price = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
@@ -90,7 +95,7 @@ async def _fetch_usd_brl() -> float | None:
     """Fetch USD/BRL exchange rate from Yahoo Finance. Returns rate or None."""
     url = "https://query1.finance.yahoo.com/v8/finance/chart/USDBRL=X"
     try:
-        response = await http_client.get(url, timeout=10.0)
+        response = await http_client.get(url, timeout=10.0, headers=YAHOO_HEADERS)
         response.raise_for_status()
         data = response.json()
         rate = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
