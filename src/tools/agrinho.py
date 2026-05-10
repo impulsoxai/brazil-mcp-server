@@ -144,7 +144,7 @@ def register_tools(mcp: FastMCP) -> None:
         info = COMMODITIES_SUPORTADAS[commodity_lower]
 
         # 2. Cache in-memory check (TTL 4h)
-        cache_key = f"commodity:{commodity_lower}:{estado or 'nacional'}"
+        cache_key = f"commodity:{commodity_lower}"
         cached = get_cached(cache_key)
         if cached is not None:
             return cached
@@ -197,27 +197,32 @@ def register_tools(mcp: FastMCP) -> None:
                 set_cached(cache_key, result, TTL_COMMODITY)
                 return result
 
-        # 5. Fallback CEPEA (HTTP direto — pode falhar por Cloudflare)
-        try:
-            cepea_url = f"https://cepea.org.br/br/indicador/{commodity_lower}.aspx"
-            response = await http_client.get(cepea_url, timeout=10.0)
-            response.raise_for_status()
-            html = response.text
+        # 5. Fallback CEPEA (HTTP direto — só para commodities com URL CEPEA conhecida)
+        CEPEA_FALLBACK_URLS = {
+            "arroz": "https://cepea.org.br/br/indicador/arroz.aspx",
+            "feijao": "https://cepea.org.br/br/indicador/feijao.aspx",
+            "soja": "https://cepea.org.br/br/indicador/soja.aspx",
+        }
+        if commodity_lower in CEPEA_FALLBACK_URLS:
+            try:
+                response = await http_client.get(CEPEA_FALLBACK_URLS[commodity_lower], timeout=10.0)
+                response.raise_for_status()
+                html = response.text
 
-            preco_match = re.search(r'(\d{1,3}(?:\.\d{3})*,\d{2})', html)
-            if preco_match:
-                preco_str = preco_match.group(1).replace(".", "").replace(",", ".")
-                preco = float(preco_str)
+                preco_match = re.search(r'(\d{1,3}(?:\.\d{3})*,\d{2})', html)
+                if preco_match:
+                    preco_str = preco_match.group(1).replace(".", "").replace(",", ".")
+                    preco = float(preco_str)
 
-                result = (
-                    f"✅ {commodity_lower.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
-                    f"Fonte: CEPEA/ESALQ\n"
-                    f"Nota: preço de referência, consulte cepea.org.br para cotação exata"
-                )
-                set_cached(cache_key, result, TTL_COMMODITY)
-                return result
-        except Exception as e:
-            print(f"[AGRINHO] CEPEA fallback falhou para {commodity_lower}: {e}", file=sys.stderr)
+                    result = (
+                        f"✅ {commodity_lower.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
+                        f"Fonte: CEPEA/ESALQ\n"
+                        f"Nota: preço de referência, consulte cepea.org.br para cotação exata"
+                    )
+                    set_cached(cache_key, result, TTL_COMMODITY)
+                    return result
+            except Exception as e:
+                print(f"[AGRINHO] CEPEA fallback falhou para {commodity_lower}: {e}", file=sys.stderr)
 
         # 6. Erro informativo
         nome = commodity_lower.replace("_", " ").title()

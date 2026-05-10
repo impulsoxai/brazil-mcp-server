@@ -355,28 +355,33 @@ async def get_commodity_cache(commodity: str) -> dict | None:
 
 async def set_commodity_cache(commodity: str, preco: float, unidade: str,
                                fonte: str, data_referencia) -> None:
-    """Upsert commodity price cache."""
+    """Upsert commodity price cache (atomic — no race condition)."""
     from datetime import date as date_type
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
     if isinstance(data_referencia, str):
         data_referencia = date_type.fromisoformat(data_referencia)
 
+    now = datetime.now(timezone.utc)
+
     async with async_session() as session:
-        result = await session.execute(
-            select(CommodityCache).where(CommodityCache.commodity == commodity)
+        stmt = pg_insert(CommodityCache).values(
+            commodity=commodity,
+            preco=preco,
+            unidade=unidade,
+            fonte=fonte,
+            data_referencia=data_referencia,
+            scraped_at=now,
         )
-        row = result.scalar_one_or_none()
-        if row:
-            row.preco = preco
-            row.unidade = unidade
-            row.fonte = fonte
-            row.data_referencia = data_referencia
-            row.scraped_at = datetime.now(timezone.utc)
-        else:
-            session.add(CommodityCache(
-                commodity=commodity,
-                preco=preco,
-                unidade=unidade,
-                fonte=fonte,
-                data_referencia=data_referencia,
-            ))
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["commodity"],
+            set_={
+                "preco": preco,
+                "unidade": unidade,
+                "fonte": fonte,
+                "data_referencia": data_referencia,
+                "scraped_at": now,
+            },
+        )
+        await session.execute(stmt)
         await session.commit()

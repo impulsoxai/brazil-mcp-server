@@ -11,7 +11,7 @@ Usage:
 import asyncio
 import re
 import sys
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from playwright.async_api import async_playwright
@@ -78,19 +78,20 @@ async def scrape_cepea(commodity: str) -> Optional[tuple[float, str]]:
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page(user_agent=USER_AGENT)
+            try:
+                page = await browser.new_page(user_agent=USER_AGENT)
 
-            await page.goto(url, timeout=30000, wait_until="networkidle")
-            await page.wait_for_timeout(3000)  # Wait for Cloudflare challenge
+                await page.goto(url, timeout=30000, wait_until="networkidle")
+                await page.wait_for_timeout(3000)  # Wait for Cloudflare challenge
 
-            title = await page.title()
-            if "moment" in title.lower() or "cloudflare" in title.lower():
-                print(f"[SCRAPER] Cloudflare bloqueou {commodity}", file=sys.stderr)
+                title = await page.title()
+                if "moment" in title.lower() or "cloudflare" in title.lower():
+                    print(f"[SCRAPER] Cloudflare bloqueou {commodity}", file=sys.stderr)
+                    return None
+
+                body_text = await page.inner_text("body")
+            finally:
                 await browser.close()
-                return None
-
-            body_text = await page.inner_text("body")
-            await browser.close()
 
         # Parse based on commodity format
         if commodity == "feijao":
