@@ -130,7 +130,7 @@ async def run_daily_scrape(commodity_filter: str = None) -> dict[str, bool]:
             results[commodity] = False
             continue
 
-        result = scrape_cepea(commodity)
+        result = await scrape_cepea(commodity)
         if result:
             preco, data_str = result
             try:
