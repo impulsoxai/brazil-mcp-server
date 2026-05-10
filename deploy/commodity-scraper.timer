@@ -1,0 +1,10 @@
+[Unit]
+Description=Run CEPEA commodity scraper daily at 18:00
+
+[Timer]
+OnCalendar=*-*-* 18:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

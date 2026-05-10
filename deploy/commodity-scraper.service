@@ -1,0 +1,20 @@
+[Unit]
+Description=CEPEA Commodity Scraper (arroz/feijão)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=mcp-server
+Group=mcp-server
+WorkingDirectory=/opt/brazil-mcp-server
+ExecStart=/opt/brazil-mcp-server/venv/bin/python -m src.scrapers.commodity_scraper
+Environment=DATABASE_URL=postgresql+asyncpg://impulsox:impulsox_mcp_2026@localhost:5432/impulsox_mcp
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=120
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/brazil-mcp-server
+
+[Install]
+WantedBy=multi-user.target

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Base, engine, async_session, ApiKey, IpFingerprint, UsageLog
+from src.models import Base, engine, async_session, ApiKey, IpFingerprint, UsageLog, CommodityCache
 from src.services.plans import get_plan
 
 
@@ -330,3 +330,53 @@ def _next_reset_date(now: datetime) -> str:
     else:
         next_reset = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
     return next_reset.isoformat()
+
+
+# ── Commodity Cache (Playwright scraper) ──────────────────
+
+async def get_commodity_cache(commodity: str) -> dict | None:
+    """Get cached commodity price from PostgreSQL."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(CommodityCache).where(CommodityCache.commodity == commodity)
+        )
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        return {
+            "commodity": row.commodity,
+            "preco": float(row.preco),
+            "unidade": row.unidade,
+            "fonte": row.fonte,
+            "data_referencia": row.data_referencia.isoformat(),
+            "scraped_at": row.scraped_at.isoformat(),
+        }
+
+
+async def set_commodity_cache(commodity: str, preco: float, unidade: str,
+                               fonte: str, data_referencia) -> None:
+    """Upsert commodity price cache."""
+    from datetime import date as date_type
+    if isinstance(data_referencia, str):
+        data_referencia = date_type.fromisoformat(data_referencia)
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(CommodityCache).where(CommodityCache.commodity == commodity)
+        )
+        row = result.scalar_one_or_none()
+        if row:
+            row.preco = preco
+            row.unidade = unidade
+            row.fonte = fonte
+            row.data_referencia = data_referencia
+            row.scraped_at = datetime.now(timezone.utc)
+        else:
+            session.add(CommodityCache(
+                commodity=commodity,
+                preco=preco,
+                unidade=unidade,
+                fonte=fonte,
+                data_referencia=data_referencia,
+            ))
+        await session.commit()
