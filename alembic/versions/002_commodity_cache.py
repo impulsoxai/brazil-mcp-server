@@ -1,14 +1,14 @@
 """commodity_cache table
 
 Revision ID: 002_commodity_cache
-Revises: 001_initial_schema
+Revises: 9bf7445cfb65
 Create Date: 2026-05-10
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = "002_commodity_cache"
-down_revision = "001_initial_schema"
+down_revision = "9bf7445cfb65"
 branch_labels = None
 depends_on = None
 
