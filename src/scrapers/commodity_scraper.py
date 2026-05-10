@@ -16,6 +16,8 @@ from typing import Optional
 
 from playwright.async_api import async_playwright
 
+from src.services.database import set_commodity_cache
+
 # CEPEA URLs for commodities without Yahoo Finance futures
 CEPEA_URLS = {
     "arroz": "https://cepea.org.br/br/indicador/arroz.aspx",
@@ -29,16 +31,16 @@ CEPEA_UNITS = {
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+_RE_ARROZ = re.compile(r"(\d{2}/\d{2}/\d{4})\t(\d{1,3}(?:\.\d{3})*,\d{2})\t")
+_RE_FEIJAO = re.compile(r"(\d{2}-\d{2}-\d{4})\t[\w\s./]+?\t(\d{1,3}(?:\.\d{3})*,\d{2})\t")
+
 
 def _parse_soja_arroz_format(body_text: str) -> Optional[tuple[float, str]]:
     """Parse CEPEA format: date\\tprice\\tchange\\tchange\\tusd
 
     Example: 08/05/2026\\t127,70\\t0,25%\\t-0,92%\\t26,09
     """
-    match = re.search(
-        r"(\d{2}/\d{2}/\d{4})\t(\d{1,3}(?:\.\d{3})*,\d{2})\t",
-        body_text,
-    )
+    match = _RE_ARROZ.search(body_text)
     if match:
         data_str = match.group(1)
         preco_str = match.group(2).replace(".", "").replace(",", ".")
@@ -52,14 +54,10 @@ def _parse_feijao_format(body_text: str) -> Optional[tuple[float, str]]:
     Example: 08-05-2026\\tCuritiba\\t388,21\\t-0,17%
     Takes first entry (Curitiba = CEPEA reference).
     """
-    match = re.search(
-        r"(\d{2}-\d{2}-\d{4})\t[\w\s./]+?\t(\d{1,3}(?:\.\d{3})*,\d{2})\t",
-        body_text,
-    )
+    match = _RE_FEIJAO.search(body_text)
     if match:
         data_str = match.group(1)
         preco_str = match.group(2).replace(".", "").replace(",", ".")
-        # Convert dd-mm-yyyy to dd/mm/yyyy for consistency
         data_fmt = data_str.replace("-", "/")
         return float(preco_str), data_fmt
     return None
@@ -121,8 +119,6 @@ async def run_daily_scrape(commodity_filter: str = None) -> dict[str, bool]:
     Returns:
         dict of {commodity: success_bool}
     """
-    from src.services.database import set_commodity_cache
-
     results = {}
     commodities = [commodity_filter] if commodity_filter else list(CEPEA_URLS.keys())
 

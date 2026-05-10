@@ -1,5 +1,6 @@
 """Módulo Agrinho — ferramentas agrícolas privadas."""
 
+import asyncio
 import json
 import re
 import sys
@@ -25,6 +26,7 @@ def _ponto_no_poligono(lat: float, lon: float, poligono: list[list[float]]) -> b
 from pydantic import Field
 from mcp.server.fastmcp import FastMCP
 
+from src.services.database import get_commodity_cache
 from src.utils import http_client
 from src.utils.cache import get_cached, set_cached, TTL_COMMODITY, TTL_WEATHER_FORECAST, TTL_WEATHER_ALERT
 from src.utils.ibge import resolver_codigo_ibge, resolver_lat_lon
@@ -76,37 +78,30 @@ CONVERSION_FACTORS = {
 # Cache PostgreSQL: commodities sem futuros
 PG_CACHE_COMMODITIES = {"arroz", "feijao"}
 
+# CEPEA fallback URLs — used when Yahoo/PG cache fail
+CEPEA_FALLBACK_URLS = {
+    "arroz": "https://cepea.org.br/br/indicador/arroz.aspx",
+    "feijao": "https://cepea.org.br/br/indicador/feijao.aspx",
+    "soja": "https://cepea.org.br/br/indicador/soja.aspx",
+}
 
 YAHOO_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 }
 
+_RE_PRECO_BRL = re.compile(r"(\d{1,3}(?:\.\d{3})*,\d{2})")
 
-async def _fetch_yahoo_price(symbol: str) -> float | None:
-    """Fetch current price from Yahoo Finance API. Returns price in cents or None."""
+
+async def _fetch_yahoo_quote(symbol: str) -> float | None:
+    """Fetch quote from Yahoo Finance API. Returns price or None."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     try:
         response = await http_client.get(url, timeout=10.0, headers=YAHOO_HEADERS)
         response.raise_for_status()
         data = response.json()
-        price = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
-        return float(price)
+        return float(data["chart"]["result"][0]["meta"]["regularMarketPrice"])
     except Exception as e:
         print(f"[AGRINHO] Yahoo Finance falhou para {symbol}: {e}", file=sys.stderr)
-        return None
-
-
-async def _fetch_usd_brl() -> float | None:
-    """Fetch USD/BRL exchange rate from Yahoo Finance. Returns rate or None."""
-    url = "https://query1.finance.yahoo.com/v8/finance/chart/USDBRL=X"
-    try:
-        response = await http_client.get(url, timeout=10.0, headers=YAHOO_HEADERS)
-        response.raise_for_status()
-        data = response.json()
-        rate = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
-        return float(rate)
-    except Exception as e:
-        print(f"[AGRINHO] Yahoo USD/BRL falhou: {e}", file=sys.stderr)
         return None
 
 
@@ -149,28 +144,28 @@ def register_tools(mcp: FastMCP) -> None:
         if cached is not None:
             return cached
 
-        # 3. Yahoo Finance — commodities com futuros CME/ICE
+        # 3. Yahoo Finance — commodities com futuros CME/ICE (parallel fetch)
         if commodity_lower in YAHOO_SYMBOLS:
             symbol = YAHOO_SYMBOLS[commodity_lower]
-            usd_brl = await _fetch_usd_brl()
-            if usd_brl:
-                price_cents = await _fetch_yahoo_price(symbol)
-                if price_cents is not None:
-                    factor = CONVERSION_FACTORS[commodity_lower]
-                    preco_brl = price_cents * factor * usd_brl
-                    nome = commodity_lower.replace("_", " ").title()
-                    result = (
-                        f"✅ {nome} — R$ {preco_brl:,.2f}/{info['unidade']}\n"
-                        f"Fonte: Yahoo Finance ({symbol})\n"
-                        f"Cotação USD/BRL: {usd_brl:.4f}\n"
-                        f"Nota: preço de referência internacional, consulte CEPEA para cotação brasileira"
-                    )
-                    set_cached(cache_key, result, TTL_COMMODITY)
-                    return result
+            usd_brl, price_cents = await asyncio.gather(
+                _fetch_yahoo_quote("USDBRL=X"),
+                _fetch_yahoo_quote(symbol),
+            )
+            if usd_brl and price_cents is not None:
+                factor = CONVERSION_FACTORS[commodity_lower]
+                preco_brl = price_cents * factor * usd_brl
+                nome = commodity_lower.replace("_", " ").title()
+                result = (
+                    f"✅ {nome} — R$ {preco_brl:,.2f}/{info['unidade']}\n"
+                    f"Fonte: Yahoo Finance ({symbol})\n"
+                    f"Cotação USD/BRL: {usd_brl:.4f}\n"
+                    f"Nota: preço de referência internacional, consulte CEPEA para cotação brasileira"
+                )
+                set_cached(cache_key, result, TTL_COMMODITY)
+                return result
 
         # 4. PostgreSQL cache — arroz/feijão (scraper diário)
         if commodity_lower in PG_CACHE_COMMODITIES:
-            from src.services.database import get_commodity_cache
             pg_cache = await get_commodity_cache(commodity_lower)
             if pg_cache and pg_cache["preco"] > 0:
                 nome = commodity_lower.replace("_", " ").title()
@@ -198,18 +193,13 @@ def register_tools(mcp: FastMCP) -> None:
                 return result
 
         # 5. Fallback CEPEA (HTTP direto — só para commodities com URL CEPEA conhecida)
-        CEPEA_FALLBACK_URLS = {
-            "arroz": "https://cepea.org.br/br/indicador/arroz.aspx",
-            "feijao": "https://cepea.org.br/br/indicador/feijao.aspx",
-            "soja": "https://cepea.org.br/br/indicador/soja.aspx",
-        }
         if commodity_lower in CEPEA_FALLBACK_URLS:
             try:
                 response = await http_client.get(CEPEA_FALLBACK_URLS[commodity_lower], timeout=10.0)
                 response.raise_for_status()
                 html = response.text
 
-                preco_match = re.search(r'(\d{1,3}(?:\.\d{3})*,\d{2})', html)
+                preco_match = _RE_PRECO_BRL.search(html)
                 if preco_match:
                     preco_str = preco_match.group(1).replace(".", "").replace(",", ".")
                     preco = float(preco_str)

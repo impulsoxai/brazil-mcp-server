@@ -6,9 +6,10 @@ Rate limit per-minute stays in-memory (deque).
 
 import time
 from collections import deque
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select, func, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Base, engine, async_session, ApiKey, IpFingerprint, UsageLog, CommodityCache
@@ -356,11 +357,8 @@ async def get_commodity_cache(commodity: str) -> dict | None:
 async def set_commodity_cache(commodity: str, preco: float, unidade: str,
                                fonte: str, data_referencia) -> None:
     """Upsert commodity price cache (atomic — no race condition)."""
-    from datetime import date as date_type
-    from sqlalchemy.dialects.postgresql import insert as pg_insert
-
     if isinstance(data_referencia, str):
-        data_referencia = date_type.fromisoformat(data_referencia)
+        data_referencia = date.fromisoformat(data_referencia)
 
     now = datetime.now(timezone.utc)
 
