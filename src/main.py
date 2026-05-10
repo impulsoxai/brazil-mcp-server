@@ -9,6 +9,7 @@ from pathlib import Path
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from mcp.server.fastmcp import FastMCP
+from mcp.types import TextContent
 
 from src.config import MCP_PORT, MCP_ENV, IMPULSOX_MASTER_KEY
 from src.tools import identidade, endereco, pagamentos, calendario, utilidades, agrinho
@@ -16,8 +17,31 @@ from src.monitoring.alertas import enviar_alerta
 from src.middleware.auth import verificar_autenticacao
 from src.middleware.rate_limit import verificar_rate_limit, verificar_limite_mensal
 from src.services import database as usage
+from src.scope import request_scope, is_tool_allowed, get_tool_scope
 
-mcp = FastMCP(
+
+class ScopedFastMCP(FastMCP):
+    """FastMCP subclass that filters tools by request scope."""
+
+    async def list_tools(self):
+        tools = await super().list_tools()
+        scope = request_scope.get()
+        if scope in ("master", "premium_t2", "premium_t1"):
+            return tools
+        # Filter out premium tools for public scope
+        return [t for t in tools if get_tool_scope(t.name) == "public"]
+
+    async def call_tool(self, name, arguments):
+        scope = request_scope.get()
+        if not is_tool_allowed(name, scope):
+            return [TextContent(
+                type="text",
+                text=f"❌ Ferramenta premium '{name}'. Faça upgrade do plano para acessar.",
+            )]
+        return await super().call_tool(name, arguments)
+
+
+mcp = ScopedFastMCP(
     "Brazil MCP Server",
     host="0.0.0.0",
     port=MCP_PORT,
@@ -60,6 +84,9 @@ class AuthRateLimitMiddleware:
 
             api_key = auth["api_key"]
             is_master = auth.get("scope") == "master"
+
+            # Set request scope for tool filtering
+            request_scope.set(auth.get("scope", "public"))
 
             # 2. Skip rate/usage for master key
             if not is_master:

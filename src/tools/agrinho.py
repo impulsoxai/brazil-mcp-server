@@ -5,6 +5,8 @@ import re
 import sys
 from typing import Annotated
 
+from src.scope import register_tool_scope
+
 
 def _ponto_no_poligono(lat: float, lon: float, poligono: list[list[float]]) -> bool:
     """Ray-casting: verifica se ponto está dentro do polígono."""
@@ -293,3 +295,8 @@ def register_tools(mcp: FastMCP) -> None:
         result = "\n".join(linhas)
         set_cached(cache_key, result, TTL_WEATHER_ALERT)
         return result
+
+    # Register scope for premium tools
+    register_tool_scope("get_commodity_price", "premium_t2")
+    register_tool_scope("get_weather_forecast", "premium_t2")
+    register_tool_scope("get_weather_alert", "premium_t2")
