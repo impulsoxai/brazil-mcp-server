@@ -9,7 +9,7 @@ from pathlib import Path
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from mcp.server.fastmcp import FastMCP
-from mcp.types import TextContent
+from mcp.server.fastmcp.exceptions import ToolError
 
 from src.config import MCP_PORT, MCP_ENV, IMPULSOX_MASTER_KEY
 from src.tools import identidade, endereco, pagamentos, calendario, utilidades, agrinho
@@ -34,10 +34,9 @@ class ScopedFastMCP(FastMCP):
     async def call_tool(self, name, arguments):
         scope = request_scope.get()
         if not is_tool_allowed(name, scope):
-            return [TextContent(
-                type="text",
-                text=f"❌ Ferramenta premium '{name}'. Faça upgrade do plano para acessar.",
-            )]
+            raise ToolError(
+                f"❌ Ferramenta premium '{name}'. Faça upgrade do plano para acessar."
+            )
         return await super().call_tool(name, arguments)
 
 
