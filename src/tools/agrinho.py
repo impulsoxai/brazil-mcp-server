@@ -57,15 +57,20 @@ YAHOO_SYMBOLS = {
 }
 
 # Fatores de conversão: cents/unit original → R$/unidade BR
-# Grãos: cents/bushel → R$/saca 60kg = kg_per_bushel / (100 * 60) * USD_BRL
-# Boi: cents/lb → R$/arroba = 14.688 / (100 * 2.20462) * USD_BRL
-# Café: cents/lb → R$/saca 60kg = 60 / (100 * 2.20462) * USD_BRL
+# Grãos: cents/bushel → R$/saca 60kg
+#   1 bushel = 60 lbs = 27.2155 kg (soja/trigo) ou 25.4012 kg (milho)
+#   factor = 60 / (100 * kg_per_bushel)
+# Boi: cents/lb → R$/arroba
+#   1 arroba = 14.688 kg, 1 lb = 0.453592 kg
+#   factor = 14.688 / (100 * 0.453592)
+# Café: cents/lb → R$/saca 60kg
+#   factor = 60 / (100 * 0.453592)
 CONVERSION_FACTORS = {
-    "soja": 27.2155 / 6000,        # ~0.004536
-    "milho": 25.4012 / 6000,       # ~0.004234
-    "trigo": 27.2155 / 6000,       # ~0.004536
-    "boi_gordo": 14.688 / 220.462, # ~0.066614
-    "cafe_arabica": 60 / 220.462,  # ~0.272155
+    "soja": 60 / (100 * 27.2155),           # ~0.02205
+    "milho": 60 / (100 * 25.4012),          # ~0.02362
+    "trigo": 60 / (100 * 27.2155),          # ~0.02205
+    "boi_gordo": 14.688 / (100 * 0.453592), # ~0.32380
+    "cafe_arabica": 60 / (100 * 0.453592),  # ~1.32277
 }
 
 # Cache PostgreSQL: commodities sem futuros
