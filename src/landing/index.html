@@ -598,7 +598,7 @@ input[type="date"].mcp-input{color-scheme:dark}
     <div class="hero-eyebrow">
       <span>BRAZIL MCP SERVER</span>
       <span class="sep">·</span>
-      <span>22 FERRAMENTAS</span>
+      <span>34 FERRAMENTAS</span>
       <span class="sep">·</span>
       <span>API REAL</span>
     </div>
@@ -606,7 +606,7 @@ input[type="date"].mcp-input{color-scheme:dark}
       O Brasil <span class="accent">resolvido</span> em uma chamada de API.
     </h1>
     <p class="hero-sub">
-      Teste as 22 ferramentas brasileiras ao vivo.
+      Teste as 34 ferramentas brasileiras ao vivo.
       Conecte em qualquer agente de IA com uma linha de configuração.
     </p>
     <div class="hero-meta">
@@ -641,6 +641,7 @@ window.MCP_CATEGORIES = [
   { id: 'pagamentos', label: 'Pagamentos', glyph: 'PG', tone: 'purple' },
   { id: 'calendario', label: 'Calendário', glyph: 'CL', tone: 'gold'   },
   { id: 'utilidades', label: 'Utilidades', glyph: 'UT', tone: 'purple' },
+  { id: 'onda1',      label: 'UTILITÁRIOS BR', glyph: 'UB', tone: 'purple' },
 ];
 
 window.MCP_TOOLS = [
@@ -763,6 +764,54 @@ window.MCP_TOOLS = [
       {name:'uf',label:'UF (opcional)',kind:'text',placeholder:'SP'},
       {name:'ddd',label:'DDD (opcional)',kind:'text',placeholder:'11'}],
     example:{uf:'SP'}},
+  { id:'formatar_mensagem_whatsapp_tool', label:'formatar_mensagem_whatsapp_tool', category:'onda1',
+    summary:'Formata texto para WhatsApp com markdown correto (*negrito*, _itálico_, listas).',
+    inputs:[{name:'texto',label:'Texto',kind:'text',placeholder:'Olá, tudo bem?',required:true},{name:'negrito',label:'Negrito',kind:'text',placeholder:'true ou false'},{name:'italico',label:'Itálico',kind:'text',placeholder:'true ou false'},{name:'itens',label:'Itens (lista)',kind:'text',placeholder:'item1,item2,item3'}],
+    example:{texto:'Promoção especial',negrito:'true'}},
+  { id:'gerar_link_whatsapp_tool', label:'gerar_link_whatsapp_tool', category:'onda1',
+    summary:'Gera link wa.me com mensagem pré-preenchida.',
+    inputs:[{name:'telefone',label:'Telefone',kind:'text',placeholder:'5548999123456',required:true,hint:'DDI+DDD+número'},{name:'mensagem',label:'Mensagem (opcional)',kind:'text',placeholder:'Olá, vim pelo site'}],
+    example:{telefone:'5548999123456',mensagem:'Olá!'}},
+  { id:'calcular_desconto_tool', label:'calcular_desconto_tool', category:'onda1',
+    summary:'Calcula valor final após desconto percentual.',
+    inputs:[{name:'valor',label:'Valor (R$)',kind:'text',placeholder:'100.00',required:true},{name:'desconto_percentual',label:'Desconto (%)',kind:'text',placeholder:'10',required:true}],
+    example:{valor:'100',desconto_percentual:'10'}},
+  { id:'calcular_comissao_tool', label:'calcular_comissao_tool', category:'onda1',
+    summary:'Calcula comissão percentual sobre valor.',
+    inputs:[{name:'valor',label:'Valor base (R$)',kind:'text',placeholder:'1000.00',required:true},{name:'percentual',label:'Percentual (%)',kind:'text',placeholder:'5',required:true}],
+    example:{valor:'1000',percentual:'5'}},
+  { id:'calcular_idade_tool', label:'calcular_idade_tool', category:'onda1',
+    summary:'Calcula idade exata a partir de data de nascimento.',
+    inputs:[{name:'data_nascimento',label:'Data de nascimento',kind:'text',placeholder:'15/03/1990',required:true,hint:'dd/mm/aaaa ou aaaa-mm-dd'}],
+    example:{data_nascimento:'15/03/1990'}},
+  { id:'formatar_data_br_tool', label:'formatar_data_br_tool', category:'onda1',
+    summary:"Converte qualquer formato de data para dd/mm/aaaa com dia da semana e extenso.",
+    inputs:[{name:'data',label:'Data',kind:'text',placeholder:'2026-05-11',required:true,hint:'ISO, americano ou BR'}],
+    example:{data:'2026-05-11'}},
+  { id:'calcular_diferenca_datas_tool', label:'calcular_diferenca_datas_tool', category:'onda1',
+    summary:'Calcula diferença entre duas datas em dias, semanas, meses, anos e dias úteis.',
+    inputs:[{name:'data_inicio',label:'Data início',kind:'text',placeholder:'01/01/2026',required:true},{name:'data_fim',label:'Data fim',kind:'text',placeholder:'31/12/2026',required:true}],
+    example:{data_inicio:'01/01/2026',data_fim:'31/12/2026'}},
+  { id:'validar_email_br_tool', label:'validar_email_br_tool', category:'onda1',
+    summary:'Valida formato de email e detecta typos em domínios brasileiros comuns.',
+    inputs:[{name:'email',label:'Email',kind:'text',placeholder:'usuario@gmail.com',required:true}],
+    example:{email:'usuario@gmai.com'}},
+  { id:'calcular_imc_tool', label:'calcular_imc_tool', category:'onda1',
+    summary:'Calcula IMC e classificação OMS em português (abaixo do peso, normal, sobrepeso, obesidades).',
+    inputs:[{name:'peso_kg',label:'Peso (kg)',kind:'text',placeholder:'70',required:true},{name:'altura_m',label:'Altura (m)',kind:'text',placeholder:'1.75',required:true,hint:'Em metros: 1.75'}],
+    example:{peso_kg:'70',altura_m:'1.75'}},
+  { id:'calcular_reajuste_inflacao_tool', label:'calcular_reajuste_inflacao_tool', category:'onda1',
+    summary:'Calcula valor com reajuste percentual (IPCA, IGP-M ou qualquer índice).',
+    inputs:[{name:'valor',label:'Valor original (R$)',kind:'text',placeholder:'1000.00',required:true},{name:'percentual_reajuste',label:'Percentual (%)',kind:'text',placeholder:'5.93',required:true,hint:'Use o índice acumulado'}],
+    example:{valor:'1000',percentual_reajuste:'5.93'}},
+  { id:'gerar_senha_segura_tool', label:'gerar_senha_segura_tool', category:'onda1',
+    summary:'Gera senha aleatória segura com nível de segurança calculado por entropia.',
+    inputs:[{name:'tamanho',label:'Tamanho',kind:'text',placeholder:'16',hint:'Mínimo 4, máximo 128'},{name:'incluir_simbolos',label:'Símbolos',kind:'text',placeholder:'true'},{name:'incluir_numeros',label:'Números',kind:'text',placeholder:'true'},{name:'incluir_maiusculas',label:'Maiúsculas',kind:'text',placeholder:'true'}],
+    example:{tamanho:'16',incluir_simbolos:'true',incluir_numeros:'true',incluir_maiusculas:'true'}},
+  { id:'converter_numero_extenso_tool', label:'converter_numero_extenso_tool', category:'onda1',
+    summary:'Converte número para extenso em PT-BR. Ex: 1234.56 → um mil duzentos e trinta e quatro reais e cinquenta e seis centavos.',
+    inputs:[{name:'valor',label:'Valor',kind:'text',placeholder:'1234.56',required:true},{name:'moeda',label:'Moeda',kind:'text',placeholder:'BRL',hint:'Padrão: BRL'}],
+    example:{valor:'1234.56',moeda:'BRL'}},
 ];
 </script>
 
@@ -828,7 +877,7 @@ const ToolSidebar = ({ activeId, onPick }) => {
   }, []);
   return (
     <aside className="tool-sidebar" id="ferramentas">
-      <div className="sidebar-eyebrow">— BRAZIL MCP · 22 FERRAMENTAS</div>
+      <div className="sidebar-eyebrow">— BRAZIL MCP · 34 FERRAMENTAS</div>
       {MCP_CATEGORIES.map((cat) => (
         <div key={cat.id} className="cat-group">
           <div className="cat-head">
