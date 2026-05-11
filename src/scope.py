@@ -64,3 +64,18 @@ def get_all_scopes() -> dict[str, str]:
 def clear_scopes() -> None:
     """Clear all registered scopes. For testing only."""
     _TOOL_SCOPES.clear()
+
+
+# Onda 1 — Lógica Pura (12 ferramentas, scope public)
+register_tool_scope("formatar_mensagem_whatsapp", "public")
+register_tool_scope("gerar_link_whatsapp", "public")
+register_tool_scope("calcular_desconto", "public")
+register_tool_scope("calcular_comissao", "public")
+register_tool_scope("calcular_idade", "public")
+register_tool_scope("formatar_data_br", "public")
+register_tool_scope("calcular_diferenca_datas", "public")
+register_tool_scope("validar_email_br", "public")
+register_tool_scope("calcular_imc", "public")
+register_tool_scope("calcular_reajuste_inflacao", "public")
+register_tool_scope("gerar_senha_segura", "public")
+register_tool_scope("converter_numero_extenso", "public")

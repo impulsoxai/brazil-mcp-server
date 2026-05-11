@@ -13,6 +13,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 from src.config import MCP_PORT, MCP_ENV, IMPULSOX_MASTER_KEY
 from src.tools import identidade, endereco, pagamentos, calendario, utilidades, agrinho
+from src.tools.onda1 import register_tools as register_onda1
 from src.monitoring.alertas import enviar_alerta
 from src.middleware.auth import verificar_autenticacao
 from src.middleware.rate_limit import verificar_rate_limit, verificar_limite_mensal
@@ -54,6 +55,7 @@ pagamentos.register_tools(mcp)
 calendario.register_tools(mcp)
 utilidades.register_tools(mcp)
 agrinho.register_tools(mcp)
+register_onda1(mcp)
 
 
 # ── Auth + Rate Limit Middleware ──────────────────────────
