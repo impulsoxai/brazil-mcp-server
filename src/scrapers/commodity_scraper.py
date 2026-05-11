@@ -3,6 +3,8 @@
 Scrapes prices from cepea.org.br bypassing Cloudflare protection.
 Runs as a daily cron job — saves to PostgreSQL commodity_cache.
 
+Note: CEPEA publishes trigo in R$/ton — converted to saca 60kg (÷16.667).
+
 Usage:
     python -m src.scrapers.commodity_scraper          # scrape all
     python -m src.scrapers.commodity_scraper arroz     # scrape one
@@ -18,18 +20,31 @@ from playwright.async_api import async_playwright
 
 from src.services.database import set_commodity_cache
 
-# CEPEA URLs for commodities without Yahoo Finance futures
+# CEPEA URLs — all commodities
 CEPEA_URLS = {
     "arroz": "https://cepea.org.br/br/indicador/arroz.aspx",
     "feijao": "https://cepea.org.br/br/indicador/feijao.aspx",
+    "soja": "https://cepea.org.br/br/indicador/soja.aspx",
+    "milho": "https://cepea.org.br/br/indicador/milho.aspx",
+    "trigo": "https://cepea.org.br/br/indicador/trigo.aspx",
+    "cafe_arabica": "https://cepea.org.br/br/indicador/cafe.aspx",
+    "boi_gordo": "https://cepea.org.br/br/indicador/boi-gordo.aspx",
 }
 
 CEPEA_UNITS = {
     "arroz": "saca (50kg)",
     "feijao": "saca (60kg)",
+    "soja": "saca (60kg)",
+    "milho": "saca (60kg)",
+    "trigo": "saca (60kg)",
+    "cafe_arabica": "saca (60kg)",
+    "boi_gordo": "arroba",
 }
 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+# CEPEA publishes trigo in R$/ton — convert to saca 60kg
+TRIGO_TON_TO_SACA = 1000 / 60  # 16.667
 
 _RE_ARROZ = re.compile(r"(\d{2}/\d{2}/\d{4})\t(\d{1,3}(?:\.\d{3})*,\d{2})\t")
 _RE_FEIJAO = re.compile(r"(\d{2}-\d{2}-\d{4})\t[\w\s./]+?\t(\d{1,3}(?:\.\d{3})*,\d{2})\t")
@@ -130,6 +145,9 @@ async def run_daily_scrape(commodity_filter: str = None) -> dict[str, bool]:
         result = await scrape_cepea(commodity)
         if result:
             preco, data_str = result
+            # Convert trigo from R$/ton to R$/saca 60kg
+            if commodity == "trigo":
+                preco = preco / TRIGO_TON_TO_SACA
             try:
                 # Parse date: dd/mm/yyyy
                 parts = data_str.split("/")

@@ -1,8 +1,6 @@
 """Módulo Agrinho — ferramentas agrícolas privadas."""
 
-import asyncio
 import json
-import re
 import sys
 from datetime import date
 from typing import Annotated
@@ -49,60 +47,8 @@ COMMODITY_ALIASES = {
     "boi": "boi_gordo",
 }
 
-# Yahoo Finance symbols — commodities com futuros CME/ICE
-YAHOO_SYMBOLS = {
-    "soja": "ZS=F",
-    "milho": "ZC=F",
-    "trigo": "ZW=F",
-    "boi_gordo": "GF=F",
-    "cafe_arabica": "KC=F",
-}
-
-# Fatores de conversão: cents/unit original → R$/unidade BR
-# Grãos: cents/bushel → R$/saca 60kg
-#   1 bushel = 60 lbs = 27.2155 kg (soja/trigo) ou 25.4012 kg (milho)
-#   factor = 60 / (100 * kg_per_bushel)
-# Boi: cents/lb → R$/arroba
-#   1 arroba = 14.688 kg, 1 lb = 0.453592 kg
-#   factor = 14.688 / (100 * 0.453592)
-# Café: cents/lb → R$/saca 60kg
-#   factor = 60 / (100 * 0.453592)
-CONVERSION_FACTORS = {
-    "soja": 60 / (100 * 27.2155),           # ~0.02205
-    "milho": 60 / (100 * 25.4012),          # ~0.02362
-    "trigo": 60 / (100 * 27.2155),          # ~0.02205
-    "boi_gordo": 14.688 / (100 * 0.453592), # ~0.32380
-    "cafe_arabica": 60 / (100 * 0.453592),  # ~1.32277
-}
-
-# Cache PostgreSQL: commodities sem futuros
-PG_CACHE_COMMODITIES = {"arroz", "feijao"}
-
-# CEPEA fallback URLs — used when Yahoo/PG cache fail
-CEPEA_FALLBACK_URLS = {
-    "arroz": "https://cepea.org.br/br/indicador/arroz.aspx",
-    "feijao": "https://cepea.org.br/br/indicador/feijao.aspx",
-    "soja": "https://cepea.org.br/br/indicador/soja.aspx",
-}
-
-YAHOO_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-}
-
-_RE_PRECO_BRL = re.compile(r"(\d{1,3}(?:\.\d{3})*,\d{2})")
-
-
-async def _fetch_yahoo_quote(symbol: str) -> float | None:
-    """Fetch quote from Yahoo Finance API. Returns price or None."""
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-    try:
-        response = await http_client.get(url, timeout=10.0, headers=YAHOO_HEADERS)
-        response.raise_for_status()
-        data = response.json()
-        return float(data["chart"]["result"][0]["meta"]["regularMarketPrice"])
-    except Exception as e:
-        print(f"[AGRINHO] Yahoo Finance falhou para {symbol}: {e}", file=sys.stderr)
-        return None
+# Cache PostgreSQL: all commodities via CEPEA scraper (daily at 18:30)
+PG_CACHE_COMMODITIES = {"arroz", "feijao", "soja", "milho", "trigo", "cafe_arabica", "boi_gordo"}
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -119,9 +65,9 @@ def register_tools(mcp: FastMCP) -> None:
         Use quando o agricultor perguntar preço de soja, milho, boi gordo,
         café, arroz, feijão ou trigo.
 
-        Fontes:
-        - Soja, milho, trigo, boi gordo, café: Yahoo Finance (CME/CBOT/ICE) em tempo real
-        - Arroz, feijão: CEPEA via scraper diário (cache PostgreSQL)
+        Fonte: CEPEA/ESALQ via scraper diário (cache PostgreSQL, atualizado 18:30).
+        Preços em R$ — soja/milho/trigo/café por saca 60kg, arroz por saca 50kg,
+        boi gordo por arroba.
 
         Exemplos: "quanto tá a soja?", "preço do milho hoje", "quanto vale o arroz?"
         """
@@ -144,77 +90,34 @@ def register_tools(mcp: FastMCP) -> None:
         if cached is not None:
             return cached
 
-        # 3. Yahoo Finance — commodities com futuros CME/ICE (parallel fetch)
-        if commodity_lower in YAHOO_SYMBOLS:
-            symbol = YAHOO_SYMBOLS[commodity_lower]
-            usd_brl, price_cents = await asyncio.gather(
-                _fetch_yahoo_quote("USDBRL=X"),
-                _fetch_yahoo_quote(symbol),
-            )
-            if usd_brl and price_cents is not None:
-                factor = CONVERSION_FACTORS[commodity_lower]
-                preco_brl = price_cents * factor * usd_brl
-                nome = commodity_lower.replace("_", " ").title()
-                result = (
-                    f"✅ {nome} — R$ {preco_brl:,.2f}/{info['unidade']}\n"
-                    f"Fonte: Yahoo Finance ({symbol})\n"
-                    f"Cotação USD/BRL: {usd_brl:.4f}\n"
-                    f"Nota: preço de referência internacional, consulte CEPEA para cotação brasileira"
-                )
-                set_cached(cache_key, result, TTL_COMMODITY)
-                return result
+        # 3. PostgreSQL cache — CEPEA scraper (all commodities)
+        pg_cache = await get_commodity_cache(commodity_lower)
+        if pg_cache and pg_cache["preco"] > 0:
+            nome = commodity_lower.replace("_", " ").title()
+            preco = pg_cache["preco"]
+            fonte = pg_cache["fonte"]
+            data_ref = pg_cache["data_referencia"]
+            scraped_at = pg_cache["scraped_at"]
 
-        # 4. PostgreSQL cache — arroz/feijão (scraper diário)
-        if commodity_lower in PG_CACHE_COMMODITIES:
-            pg_cache = await get_commodity_cache(commodity_lower)
-            if pg_cache and pg_cache["preco"] > 0:
-                nome = commodity_lower.replace("_", " ").title()
-                preco = pg_cache["preco"]
-                fonte = pg_cache["fonte"]
-                data_ref = pg_cache["data_referencia"]
-                scraped_at = pg_cache["scraped_at"]
-
-                # Verificar idade do cache
-                try:
-                    scraped_date = date.fromisoformat(scraped_at[:10])
-                    age_days = (date.today() - scraped_date).days
-                except (ValueError, TypeError):
-                    age_days = 0
-
-                aviso = ""
-                if age_days > 2:
-                    aviso = f"\n⚠️ Preço pode estar desatualizado (última atualização: {data_ref}, há {age_days} dias)"
-
-                result = (
-                    f"✅ {nome} — R$ {preco:,.2f}/{info['unidade']}\n"
-                    f"Fonte: {fonte} — referência {data_ref}{aviso}"
-                )
-                set_cached(cache_key, result, TTL_COMMODITY)
-                return result
-
-        # 5. Fallback CEPEA (HTTP direto — só para commodities com URL CEPEA conhecida)
-        if commodity_lower in CEPEA_FALLBACK_URLS:
+            # Verificar idade do cache
             try:
-                response = await http_client.get(CEPEA_FALLBACK_URLS[commodity_lower], timeout=10.0)
-                response.raise_for_status()
-                html = response.text
+                scraped_date = date.fromisoformat(scraped_at[:10])
+                age_days = (date.today() - scraped_date).days
+            except (ValueError, TypeError):
+                age_days = 0
 
-                preco_match = _RE_PRECO_BRL.search(html)
-                if preco_match:
-                    preco_str = preco_match.group(1).replace(".", "").replace(",", ".")
-                    preco = float(preco_str)
+            aviso = ""
+            if age_days > 2:
+                aviso = f"\n⚠️ Preço pode estar desatualizado (última atualização: {data_ref}, há {age_days} dias)"
 
-                    result = (
-                        f"✅ {commodity_lower.replace('_', ' ').title()} — R$ {preco:,.2f}/{info['unidade']}\n"
-                        f"Fonte: CEPEA/ESALQ\n"
-                        f"Nota: preço de referência, consulte cepea.org.br para cotação exata"
-                    )
-                    set_cached(cache_key, result, TTL_COMMODITY)
-                    return result
-            except Exception as e:
-                print(f"[AGRINHO] CEPEA fallback falhou para {commodity_lower}: {e}", file=sys.stderr)
+            result = (
+                f"✅ {nome} — R$ {preco:,.2f}/{info['unidade']}\n"
+                f"Fonte: {fonte} — referência {data_ref}{aviso}"
+            )
+            set_cached(cache_key, result, TTL_COMMODITY)
+            return result
 
-        # 6. Erro informativo
+        # 4. Erro informativo
         nome = commodity_lower.replace("_", " ").title()
         return (
             f"❌ Não foi possível obter preço de {nome}.\n"
