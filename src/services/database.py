@@ -360,7 +360,8 @@ async def set_commodity_cache(commodity: str, preco: float, unidade: str,
     if isinstance(data_referencia, str):
         data_referencia = date.fromisoformat(data_referencia)
 
-    now = datetime.now(timezone.utc)
+    # TIMESTAMP WITHOUT TIME ZONE — strip timezone
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     async with async_session() as session:
         stmt = pg_insert(CommodityCache).values(
