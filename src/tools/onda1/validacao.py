@@ -106,6 +106,9 @@ def converter_numero_extenso(
     if valor < 0:
         return "❌ Valor negativo não é válido para conversão.\nDica: use um número positivo."
 
+    if valor > 1e15:
+        return "❌ Valor muito alto para conversão por extenso.\nDica: máximo suportado é R$ 1.000.000.000.000.000,00 (um quadrilhão)."
+
     if valor == 0:
         if moeda.upper() == "BRL":
             return "zero reais"
