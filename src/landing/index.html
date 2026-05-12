@@ -854,7 +854,7 @@ const highlightJSON = (obj) => {
       return '<span class="'+c+'">'+m+'</span>';
     }
   ).replace(
-    /"(https:\/\/wa\.me\/[^"]+)"/g,
+    /(https:\/\/wa\.me\/[^\s"\\]+)/g,
     (match, url) => {
       return '<a href="' + url + '" target="_blank" ' +
              'class="wa-link" ' +
