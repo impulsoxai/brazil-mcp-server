@@ -844,24 +844,21 @@ const isEmpty = (v) => v === '' || v === undefined || v === null;
 const highlightJSON = (obj) => {
   const json = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
   const escaped = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return escaped.replace(
-    /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-    (m) => {
-      let c='jn-num';
-      if(/^"/.test(m)) c=/:$/.test(m)?'jn-key':'jn-str';
-      else if(/true|false/.test(m)) c='jn-bool';
-      else if(/null/.test(m)) c='jn-null';
-      return '<span class="'+c+'">'+m+'</span>';
-    }
-  ).replace(
-    /(https:\/\/wa\.me\/[^\s"\\]+)/g,
-    (match, url) => {
-      return '<a href="' + url + '" target="_blank" ' +
-             'class="wa-link" ' +
-             'style="color:#25D366;text-decoration:underline;">' +
-             '📱 Abrir no WhatsApp →</a>';
-    }
-  );
+  return escaped
+    .replace(/(https:\/\/wa\.me\/[^\s"\\]+)/g,
+      (match, url) => '<a href="'+url+'" target="_blank" class="wa-link" style="color:#25D366;text-decoration:underline;">📱 Abrir no WhatsApp →</a>'
+    )
+    .replace(
+      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      (m) => {
+        let c='jn-num';
+        if(/^"/.test(m)) c=/:$/.test(m)?'jn-key':'jn-str';
+        else if(/true|false/.test(m)) c='jn-bool';
+        else if(/null/.test(m)) c='jn-null';
+        return '<span class="'+c+'">'+m+'</span>';
+      }
+    )
+  ;
 };
 
 const StatusPill = ({ status }) => {
