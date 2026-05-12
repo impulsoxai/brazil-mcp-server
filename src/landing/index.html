@@ -845,7 +845,7 @@ const highlightJSON = (obj) => {
   const json = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
   const escaped = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   return escaped
-    .replace(/(https:\/\/wa\.me\/[^\s"\\]+)/g,
+    .replace(/(https:\/\/wa\.me\/[^"'\s\\<>]+)/g,
       (match, url) => '<a href="'+url+'" target="_blank" class="wa-link" style="color:#25D366;text-decoration:underline;">📱 Abrir no WhatsApp →</a>'
     )
     .replace(
