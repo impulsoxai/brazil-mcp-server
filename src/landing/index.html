@@ -766,7 +766,7 @@ window.MCP_TOOLS = [
     example:{uf:'SP'}},
   { id:'formatar_mensagem_whatsapp_tool', label:'formatar_mensagem_whatsapp_tool', category:'onda1',
     summary:'Formata texto para WhatsApp com markdown correto (*negrito*, _itálico_, listas).',
-    inputs:[{name:'texto',label:'Texto',kind:'text',placeholder:'Olá, tudo bem?',required:true},{name:'negrito',label:'Negrito',kind:'text',placeholder:'true ou false'},{name:'italico',label:'Itálico',kind:'text',placeholder:'true ou false'},{name:'itens',label:'Itens (lista)',kind:'text',placeholder:'item1,item2,item3'}],
+    inputs:[{name:'texto',label:'Texto',kind:'text',placeholder:'Olá, tudo bem?',required:true},{name:'negrito',label:'Negrito',kind:'text',placeholder:'true ou false'},{name:'italico',label:'Itálico',kind:'text',placeholder:'true ou false'},{name:'itens',label:'Itens (lista)',kind:'text',placeholder:'item1,item2,item3',hint:'Separe por vírgula: item1,item2,item3'}],
     example:{texto:'Promoção especial',negrito:'true'}},
   { id:'gerar_link_whatsapp_tool', label:'gerar_link_whatsapp_tool', category:'onda1',
     summary:'Gera link wa.me com mensagem pré-preenchida.',
@@ -852,6 +852,14 @@ const highlightJSON = (obj) => {
       else if(/true|false/.test(m)) c='jn-bool';
       else if(/null/.test(m)) c='jn-null';
       return '<span class="'+c+'">'+m+'</span>';
+    }
+  ).replace(
+    /"(https:\/\/wa\.me\/[^"]+)"/g,
+    (match, url) => {
+      return '<a href="' + url + '" target="_blank" ' +
+             'class="wa-link" ' +
+             'style="color:#25D366;text-decoration:underline;">' +
+             '📱 Abrir no WhatsApp →</a>';
     }
   );
 };

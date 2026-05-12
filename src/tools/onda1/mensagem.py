@@ -19,6 +19,9 @@ def formatar_mensagem_whatsapp(
     """
     resultado = texto
 
+    if isinstance(itens, str) and itens:
+        itens = [i.strip() for i in itens.split(',')]
+
     if negrito:
         resultado = f"*{resultado}*"
 
