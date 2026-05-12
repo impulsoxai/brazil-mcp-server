@@ -973,7 +973,7 @@ const ResultPanel = ({ state }) => {
         <span className="result-eyebrow tone-ok">— RESPOSTA · {durationMs}MS · 200 OK</span>
         <button className="btn-ghost-mini" onClick={()=>{ if(navigator.clipboard) navigator.clipboard.writeText(JSON.stringify(payload,null,2)); }}>COPIAR JSON</button>
       </div>
-      <pre className="json-block" dangerouslySetInnerHTML={{__html:highlightJSON(typeof payload === 'string' ? makeWaLinks(payload) : payload)}}/>
+      <pre className="json-block" dangerouslySetInnerHTML={{__html:typeof payload === 'string' ? makeWaLinks(payload) : highlightJSON(payload)}}/>
     </div>
   );
 };
