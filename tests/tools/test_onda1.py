@@ -187,6 +187,23 @@ class TestFormatarMensagemWhatsapp:
         result = formatar_mensagem_whatsapp("", itens=["a", "b"])
         assert "- a" in result and "- b" in result
 
+    def test_lista_string_virgula(self):
+        result = formatar_mensagem_whatsapp("Servicos", itens="Corte,Barba,Hidratação")
+        assert "- Corte" in result
+        assert "- Barba" in result
+        assert "- Hidratação" in result
+        assert "Servicos" in result
+
+    def test_lista_string_item_unico(self):
+        result = formatar_mensagem_whatsapp("Texto", itens="Item único")
+        assert "- Item único" in result
+        assert "Texto" in result
+
+    def test_lista_string_vazia_sem_erro(self):
+        result = formatar_mensagem_whatsapp("Texto", itens="")
+        assert "Texto" in result
+        assert "- " not in result  # sem linhas de lista
+
     def test_negrito_e_italico_nao_sao_substrings_separados(self):
         # Aplicação sequencial: bold depois italic = _*texto*_
         # Não existe na spec comportamento para negrito+italico simultâneo

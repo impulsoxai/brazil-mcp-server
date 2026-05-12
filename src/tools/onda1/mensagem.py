@@ -10,7 +10,7 @@ def formatar_mensagem_whatsapp(
     texto: Annotated[str, Field(description="Texto da mensagem")],
     negrito: Annotated[bool, Field(description="Negrito", default=False)] = False,
     italico: Annotated[bool, Field(description="Itálico", default=False)] = False,
-    itens: Annotated[list[str] | None, Field(description="Lista com marcadores", default=None)] = None,
+    itens: Annotated[str | None, Field(description="Lista com marcadores (string separada por vírgula)", default=None)] = None,
 ) -> str:
     """Formata texto para WhatsApp com markdown correto.
 
@@ -69,7 +69,7 @@ def register_tools(mcp: FastMCP) -> None:
         texto: Annotated[str, Field(description="Texto da mensagem")],
         negrito: Annotated[bool, Field(description="Negrito", default=False)] = False,
         italico: Annotated[bool, Field(description="Itálico", default=False)] = False,
-        itens: Annotated[list[str] | None, Field(description="Lista com marcadores", default=None)] = None,
+        itens: Annotated[str | None, Field(description="Lista com marcadores (string separada por vírgula)", default=None)] = None,
     ) -> str:
         """Formata texto para WhatsApp com markdown correto.
 
